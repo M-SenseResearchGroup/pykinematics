@@ -6,7 +6,7 @@ Lukas Adamowicz
 
 V0.1 - March 8, 2019
 """
-from numpy import array, zeros, logical_and, abs as nabs, concatenate, cross
+from numpy import array, zeros, logical_and, abs as nabs, concatenate, cross, std
 from numpy.linalg import lstsq, norm
 from scipy.optimize import least_squares
 
@@ -185,4 +185,100 @@ class Center:
         at2 = a2 - cross(w2, cross(w2, r2, axisb=0)) - cross(wd2, r2, axisb=0)
 
         return norm(at1, axis=1) - norm(at2, axis=1)
+
+
+class KneeAxis:
+    def __init__(self, mask_input=True, min_samples=1500, opt_kwargs={}):
+        """
+
+        Parameters
+        ----------
+        mask_input : bool, optional
+            Mask the input to only use samples with enough angular velocity to give a good estimate.  Default is True.
+        min_samples : int, optional
+            Minimum number of samples to use in the optimization.  Default is 1500.
+        opt_kwargs : dict, optional
+            Optimization key-word arguments.  See scipy.optimize.least_squares.
+
+        References
+        ----------
+        Seel et al. IMU-Based Joint Angle Measurement for Gait Analysis. Sensors. 2014
+        Seel et al. Joint axis and position estimation from inertial measurement data by exploiting kinematic
+        constraints. 2012 IEEE International Conference on Control Applications. 2012
+        """
+        self.mask_input = mask_input
+        self.min_samples = min_samples
+        self.opt_kwargs = opt_kwargs
+
+    def compute(self, thigh_w, shank_w):
+        """
+        Compute the knee axis using the given angular velocities.
+
+        Parameters
+        ----------
+        thigh_w : numpy.ndarray
+            Nx3 array of angular velocities measured by the thigh sensor.
+        shank_w : numpy.ndarray
+            Nx3 array of angular velocities measured by the shank sensor.
+
+        Returns
+        -------
+        thigh_j : numpy.ndarray
+            Vector of the joint rotation axis in the thigh sensor frame.
+        shank_j : numpy.ndarray
+            Vector of the joint rotation axis in the shank sensor frame.
+        """
+        j_init = zeros(6)
+
+        if self.mask_input:
+            thigh_wn = norm(thigh_w, axis=1)
+            shank_wn = norm(shank_w, axis=1)
+
+            factor = 1.0
+            mask = zeros(thigh_wn.size, dtype=bool)
+            while mask.sum() < self.min_samples:
+                mask = (thigh_wn > (factor * std(thigh_wn))) & (shank_wn > (factor * std(shank_wn)))
+                factor -= 0.1
+                if factor < 0.15:
+                    raise ValueError('Not enough samples to mask and still estimate the joint axis.  Consider not '
+                                     'masking, or use a trial with more samples')
+        else:
+            mask = array([True] * thigh_w.shape[0])
+
+            # arguments for the solver
+        args = (thigh_w[mask], shank_w[mask])
+        # solve and normalize the result
+        sol = least_squares(KneeAxis.compute_axis_residuals, j_init.flatten(), args=args, **self.opt_kwargs)
+        thigh_j = sol.x[:3] / norm(sol.x[:3])
+        shank_j = sol.x[3:] / norm(sol.x[3:])
+
+        return thigh_j, shank_j
+
+    @staticmethod
+    def compute_axis_residuals(j, thigh_w, shank_w):
+        """
+        Compute the residuals using the estimate of the axis.
+
+        Parameters
+        ----------
+        j : numpy.ndarray
+            Estimates of thigh and shank axis stacked into one vector
+        thigh_w : numpy.ndarray
+            Nx3 array of angular velocities measured by the thigh sensor.
+        shank_w : numpy.ndarray
+            Nx3 array of angular velocities measured by the shank sensor.
+
+        Returns
+        -------
+        e : numpy.ndarray
+            N length array of residuals.
+        """
+        j1 = j[:3] / norm(j[:3])
+        j2 = j[3:] / norm(j[3:])
+
+        wp1 = cross(thigh_w, j1)
+        wp2 = cross(shank_w, j2)
+
+        return norm(wp1, axis=1) - norm(wp2, axis=1)
+
 
