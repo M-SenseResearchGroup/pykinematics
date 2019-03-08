@@ -134,3 +134,50 @@ def mov_avg(seq, window):
         # m_st = m_st[:-1]
         pass
     return m_mn, m_st, pad
+
+
+def quat_mult(q1, q2):
+    """
+    Multiply quaternions
+
+    Parameters
+    ----------
+    q1 : numpy.ndarray
+        1x4 array representing a quaternion
+    q2 : numpy.ndarray
+        1x4 array representing a quaternion
+
+    Returns
+    -------
+    q : numpy.ndarray
+        1x4 quaternion product of q1*q2
+    """
+    if q1.shape != (1, 4) and q1.shape != (4, 1) and q1.shape != (4,):
+        raise ValueError('Quaternions contain 4 dimensions, q1 has more or less than 4 elements')
+    if q2.shape != (1, 4) and q2.shape != (4, 1) and q2.shape != (4,):
+        raise ValueError('Quaternions contain 4 dimensions, q2 has more or less than 4 elements')
+    if q1.shape == (4, 1):
+        q1 = q1.T
+
+    Q = array([[q2[0], q2[1], q2[2], q2[3]],
+               [-q2[1], q2[0], -q2[3], q2[2]],
+               [-q2[2], q2[3], q2[0], -q2[1]],
+               [-q2[3], -q2[2], q2[1], q2[0]]])
+
+    return q1 @ Q
+
+def quat_conj(q):
+    """
+    Compute the conjugate of a quaternion
+
+    Parameters
+    ----------
+    q : numpy.ndarray
+        Nx4 array of N quaternions to compute the conjugate of.
+
+    Returns
+    -------
+    q_conj : numpy.ndarray
+        Nx4 array of N quaternion conjugats of q.
+    """
+    return q * array([1, -1, -1, -1])
