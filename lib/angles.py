@@ -10,18 +10,20 @@ from numpy import cross, abs as nabs, arctan2 as atan2, sum, arccos, pi, stack
 from numpy.linalg import norm
 
 
-def hip_from_frames(pelvis_AF, thigh_AF, R, zero_angles=False):
+def hip_from_frames(pelvis_AF, thigh_AF, R, side, zero_angles=False):
     """
     Compute the hip joint angles from fixed and reference axes from the anatomical frames.
 
     Parameters
     ----------
-    hip_AF : numpy.ndarray
+    pelvis_AF : numpy.ndarray
         3x3 matrix of the pelvis anatomical axes in the pelvis sensor's frame. Columns correspond to pelvis X, Y, and Z.
     thigh_AF : numpy.ndarray
         3x3 matrix of the thigh anatomical axes in the thigh sensor's frame. Columns correspond to thigh X, Y, and Z.
     R : numpy.ndarray
         Nx3x3 array of rotation matrices from the thigh sensor frame to the pelvis sensor frame.
+    side : {'left', 'right'}
+        Side the angles are being computed for.
     zero_angles : bool, optional
         Remove any offset from zero at the start of the angles. Default is False.
 
@@ -53,19 +55,20 @@ def hip_from_frames(pelvis_AF, thigh_AF, R, zero_angles=False):
     sgn /= nabs(sgn)
     fe = atan2(sgn * norm(cross(X, e2), axis=1), sum(X * e2, axis=1))
 
-    if 'right' in hip.name.lower():
+    if side == 'right':
+        # ad / abduction calculation
+        aa = -pi / 2 + arccos(sum(e1 * e3, axis=1))
+
+        # internal - external rotation sign calculation
         sgn = sum(cross(x, e2) * -y, axis=1)
-    elif 'left' in hip.name.lower():
+    elif side == 'left':
+        aa = pi / 2 - arccos(sum(e1 * e3, axis=1))
         sgn = sum(cross(x, e2) * y, axis=1)
+    else:
+        raise ValueError("side must be either 'left' or 'right'.")
+
     sgn /= nabs(sgn)
     ier = atan2(sgn * norm(cross(x, e2), axis=1), sum(x * e2, axis=1))
-
-    if 'right' in hip.name.lower():
-        aa = -pi / 2 + arccos(sum(e1 * e3, axis=1))
-    elif 'left' in hip.name.lower():
-        aa = pi / 2 - arccos(sum(e1 * e3, axis=1))
-    else:
-        raise ValueError('Joint name must have a side in it for angle sign determination.')
 
     angles = stack((fe, aa, ier), axis=1) * 180 / pi
     if zero_angles:
