@@ -7,7 +7,7 @@ Lukas Adamowicz
 V0.1 - March 8, 2019
 """
 from numpy import zeros, sqrt
-from numpy.linalg import inv, cholesky
+from numpy.linalg import inv, cholesky, pinv
 
 
 class UnscentedKalmanFilter:
