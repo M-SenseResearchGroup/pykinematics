@@ -8,6 +8,7 @@ V0.1 - March 8, 2019
 """
 from numpy import cross, abs as nabs, arctan2 as atan2, sum, arccos, pi, stack
 from numpy.linalg import norm
+from scipy.integrate import cumtrapz
 
 
 def hip_from_frames(pelvis_AF, thigh_AF, R, side, zero_angles=False):
@@ -74,4 +75,67 @@ def hip_from_frames(pelvis_AF, thigh_AF, R, side, zero_angles=False):
     if zero_angles:
         angles -= angles[0, :]
 
+    return angles
+
+
+def hip_from_gyr(pelvis_w, thigh_w, pelvis_axis, thigh_axis, R, side):
+    """
+    Compute hip angles by integrating the difference between the two sensors angular velocities about the axis
+    of rotation.  Typically not very noisy on higher frequencies, but on lower frequencies where it exhibits drift
+    due to integration being used.
+
+    Parameters
+    ----------
+    pelvis_w : numpy.ndarray
+        Nx3 array of angular velocity vectors in the pelvis sensor frame.
+    thigh_w : numpy.ndarray
+        Nx3 array of angular velocity vectors in the thigh sensor frame.
+    pelvis_axis : numpy.ndarray
+        Pelvis fixed axis.
+    thigh_axis : numpy.ndarray
+        Thigh fixed axis.
+    R : numpy.ndarray
+        Nx3x3 array of rotation matrices from the thigh sensor frame to the pelvis sensor frame.
+    side : {'left', 'right'}
+        Side angles are being computed for.
+
+    Returns
+    -------
+    angles : numpy.ndarray
+        Nx3 array of joint angles for the trial.  Columns are flexion - extension, ad / abduction, and
+        internal - external rotation respectively.
+    """
+    # get the joint rotation axes in the pelvis frame
+    pelvis_e1 = pelvis_axis
+    pelvis_e3 = R @ thigh_axis
+
+    pelvis_e2 = cross(pelvis_e3, pelvis_e1)
+    pelvis_e2 /= norm(pelvis_e2, axis=1, keepdims=True)
+
+    # get the joint rotation axes in the thigh frame
+    thigh_e1 = R.transpose([0, 2, 1]) @ pelvis_axis
+    thigh_e3 = thigh_axis
+
+    thigh_e2 = cross(thigh_e3, thigh_e1)
+    thigh_e2 /= norm(thigh_e2, axis=1, keepdims=True)
+
+    # compute the differences between angular rates around their respective rotation axes
+    # TODO needs to be corrected still
+    if side == 'left':
+        fe_int = sum(pelvis_w * pelvis_e1, axis=1) - sum(thigh_w * thigh_e1, axis=1)
+        aa_int = -sum(pelvis_w * pelvis_e2, axis=1) + sum(thigh_w * thigh_e2, axis=1)
+        ier_int = sum(pelvis_w * pelvis_e3, axis=1) - sum(thigh_w * thigh_e3, axis=1)
+    elif side == 'right':
+        fe_int = sum(pelvis_w * pelvis_e1, axis=1) - sum(thigh_w * thigh_e1, axis=1)
+        aa_int = sum(pelvis_w * pelvis_e2, axis=1) - sum(thigh_w * thigh_e2, axis=1)
+        ier_int = -sum(pelvis_w * pelvis_e3, axis=1) + sum(thigh_w * thigh_e3, axis=1)
+    else:
+        raise ValueError("side must be 'left' or 'right'.")
+
+    # integrate the differences in angular velocities to get angles.
+    fe = cumtrapz(fe_int, dx=1 / 128, initial=0)
+    aa = cumtrapz(aa_int, dx=1 / 128, initial=0)
+    ier = cumtrapz(ier_int, dx=1 / 128, initial=0)
+
+    angles = stack((fe, aa, ier), axis=1) * 180 / pi
     return angles
