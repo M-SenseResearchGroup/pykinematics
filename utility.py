@@ -6,7 +6,8 @@ Lukas Adamowicz
 
 V0.1 - March 8, 2019
 """
-from numpy import array, argmin, zeros, ceil, mean, std, sqrt
+from numpy import array, argmin, zeros, ceil, mean, std, sqrt, argsort, dot, arccos, cross, cos, sin
+from numpy.linalg import norm, eig
 
 
 def find_most_still(data, window_size, return_index=False):
@@ -166,6 +167,7 @@ def quat_mult(q1, q2):
 
     return q1 @ Q
 
+
 def quat_conj(q):
     """
     Compute the conjugate of a quaternion
@@ -181,3 +183,112 @@ def quat_conj(q):
         Nx4 array of N quaternion conjugats of q.
     """
     return q * array([1, -1, -1, -1])
+
+
+def quat_inv(q):
+    """
+    Invert a quaternion
+
+    Parameters
+    ----------
+    q : numpy.ndarray
+        1x4 array representing a quaternion
+
+    Returns
+    -------
+    q_inv : numpy.ndarray
+        1x4 array representing the inverse of q
+    """
+    q_conj = q * array([1, -1, -1, -1])
+    return q_conj / sum(q ** 2)
+
+
+def quat2matrix(q):
+    """
+    Transform quaternion to rotation matrix
+
+    Parameters
+    ----------
+    q : numpy.ndarray
+        Quaternion
+
+    Returns
+    -------
+    R : numpy.ndarray
+        Rotation matrix
+    """
+    if q.ndim == 1:
+        s = norm(q)
+        R = array([[1 - 2 * s * (q[2] ** 2 + q[3] ** 2), 2 * s * (q[1] * q[2] - q[3] * q[0]),
+                    2 * s * (q[1] * q[3] + q[2] * q[0])],
+                   [2 * s * (q[1] * q[2] + q[3] * q[0]), 1 - 2 * s * (q[1] ** 2 + q[3] ** 2),
+                    2 * s * (q[2] * q[3] - q[1] * q[0])],
+                   [2 * s * (q[1] * q[3] - q[2] * q[0]), 2 * s * (q[2] * q[3] + q[1] * q[0]),
+                    1 - 2 * s * (q[1] ** 2 + q[2] ** 2)]])
+    elif q.ndim == 2:
+        s = norm(q, axis=1)
+        R = array([[1 - 2 * s * (q[:, 2]**2 + q[:, 3]**2), 2 * s * (q[:, 1] * q[:, 2] - q[:, 3] * q[:, 0]),
+                    2 * s * (q[:, 1] * q[:, 3] + q[:, 2] * q[:, 0])],
+                   [2 * s * (q[:, 1] * q[:, 2] + q[:, 3] * q[:, 0]), 1 - 2 * s * (q[:, 1]**2 + q[:, 3]**2),
+                    2 * s * (q[:, 2] * q[:, 3] - q[:, 1] * q[:, 0])],
+                   [2 * s * (q[:, 1] * q[:, 3] - q[:, 2] * q[:, 0]), 2 * s * (q[:, 2] * q[:, 3] + q[:, 1] * q[:, 0]),
+                    1 - 2 * s * (q[:, 1]**2 + q[:, 2]**2)]])
+        R = R.transpose([2, 0, 1])
+    return R
+
+
+def quat_mean(q):
+    """
+    Calculate the mean of an array of quaternions
+
+    Parameters
+    ----------
+    q : numpy.ndarray
+        Nx4 array of quaternions
+
+    Returns
+    -------
+    q_mean : numpy.array
+        Mean quaternion
+    """
+    M = q.T @ q
+
+    vals, vecs = eig(M)  # Eigenvalues and vectors of M
+    sort_ind = argsort(vals)  # get the indices of the eigenvalues sorted
+
+    q_mean = vecs[:, sort_ind[-1]]
+
+    # ensure no discontinuities
+    if q_mean[0] < 0:
+        q_mean *= -1
+
+    return q_mean
+
+
+def vec2quat(v1, v2):
+    """
+    Find the rotation quaternion between two vectors. Rotate v1 onto v2
+    Parameters
+    ----------
+    v1 : numpy.ndarray
+        Vector 1
+    v2 : numpy.ndarray
+        Vector 2
+
+    Returns
+    -------
+    q : numpy.ndarray
+        Quaternion representing the rotation from v1 to v2
+    """
+    angle = arccos(dot(v1.flatten(), v2.flatten()) / (norm(v1) * norm(v2)))
+
+    # Rotation axis is always normal to two vectors
+    axis = cross(v1.flatten(), v2.flatten())
+    axis = axis / norm(axis)  # normalize
+
+    q = zeros(4)
+    q[0] = cos(angle / 2)
+    q[1:] = axis * sin(angle / 2)
+    q /= norm(q)
+
+    return q
