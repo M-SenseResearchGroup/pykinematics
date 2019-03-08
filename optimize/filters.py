@@ -6,7 +6,7 @@ Lukas Adamowicz
 
 V0.1 - March 8, 2019
 """
-from numpy import zeros
+from numpy import zeros, sqrt
 from numpy.linalg import inv, cholesky
 
 
@@ -29,6 +29,11 @@ class UnscentedKalmanFilter:
         R : matrix_like,array_like,float,str,optional
             Process covariance.  Must be None, NxN matrix/array, or float.
             If None, defaults to 1.
+
+        Methods
+        -------
+        run(z, f_kwargs, h_kwargs, sigma_kwargs)
+            Run one step of the unscented kalman filter algorithm.
         """
 
         if x0.ndim == 1:
@@ -42,7 +47,7 @@ class UnscentedKalmanFilter:
         self.Q = Q
         self.R = R
 
-    def run1(self, z, f_kwargs={}, h_kwargs={}, sigma_kwargs={}):
+    def run(self, z, f_kwargs={}, h_kwargs={}, sigma_kwargs={}):
         """
         Run Unscented Kalman filter for 1 step
 
@@ -176,3 +181,102 @@ class UnscentedKalmanFilter:
         return x, P
 
 
+class GaussNewton:
+    def __init__(self, x0, tol=0.001, f_tol=0.001, max_iters=300, verbose=False):
+        """
+        Gauss-Newton optimization function
+
+        Parameters
+        ----------
+        x0 : numpy.ndarray
+            Mx1 array of initial guess for x
+        tol : float, optional
+            Tolerance for the change in x per iteration, as a percentage of x.  Default is 0.001.
+        f_tol : float, optional
+            Tolerance for the change in the residual value per iteration, as a percentage of previous residual.
+            Default is 0.001
+        max_iters : int, optional
+            Maximum number of iterations.  Default is 300
+        verbose : bool, optional
+            Display convergence messages on the first 10 iterations, and then on iterations that are perfect squares.
+            Default is False
+
+        Methods
+        -------
+        fit(f, J, f_args={}, j_args={})
+            Perform the optimization using the function f to calculate the residuals, and J to calculate the Jacobian.
+            Extra arguments can be passed to f and J through f_args and j_args
+        """
+        self.tol = tol
+        self.ftol = f_tol
+        self.max_iters = max_iters
+        self.verbose = verbose
+
+        if x0.ndim == 1:
+            self.x = x0.reshape((-1, 1)).copy()
+        else:
+            self.x = x0.copy()
+
+    def fit(self, f, J, f_args=(), f_kwargs={}, j_args=(), j_kwargs={}):
+        """
+        Perform the optimization on x.
+
+        Parameters
+        ----------
+        f : callable
+            Function to calculate the Nx1 array of residuals.  First argument is x, the parameters being optimized.
+        J : callable
+            Function to calculate the NxM Jacobian matrix.  First argument is x, the parameters being optimized.
+        f_args : tuple, optional
+            Additional arguments to pass to the residual calculation function.
+        f_kwargs : dict, optional
+            Additional key-word arguments to pass to the residual calculation function.
+        j_args : tuple, optional
+            Additional arguments to pass to the Jacobian calculation function.
+        j_kwargs : dict, optional
+            Additional key-word arguments to pass to the residual calculation function.
+
+        Returns
+        -------
+        x : numpy.ndarray
+            Optimized result
+        i : int
+            Number of iterations to converge on solution
+        fval : float
+            Sum of squared errors at final solution
+        """
+
+        # initialize stopping parameters
+        dx = self.x.copy()
+        pc = (abs(dx / self.x) > self.tol).any()  # percent change in x is larger than tolerance
+        fval = 1e12
+        fc = 1 > self.ftol  # percent change in sum of squared error is larger than error tolerance
+        i =0
+
+        while pc and fc and i < self.max_iters:
+            e = f(self.x, *f_args, **f_kwargs)  # calculate the residual vector
+            j = J(self.x, *j_args, **j_kwargs)  # calculate the jacobian
+
+            j_inv = pinv(j)  # calculate the moore-penrose inverse of J
+
+            dx = j_inv @ e  # calculate the update to x
+
+            # calculate percent change in x parameter
+            pc = (abs(dx / self.x) > self.tol).any()
+
+            # update x
+            self.x -= dx
+
+            # calculate percent change in SSE, and SSE
+            fc = abs(sum(e ** 2) - fval) / fval
+            fval = sum(e ** 2)
+
+            # print message if verbose is True
+            if self.verbose:
+                if sqrt(i) % 1 == 0 or i < 11:
+                    print(f'{i:5d}  SSE per sample: {fval/e.shape[0]:10.3f}')
+
+            # increment i
+            i += 1
+
+        return self.x, i, fval
