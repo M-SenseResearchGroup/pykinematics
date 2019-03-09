@@ -6,7 +6,7 @@ Lukas Adamowicz
 
 V0.1 - March 8, 2019
 """
-from numpy import array, zeros, logical_and, abs as nabs, concatenate, cross, std
+from numpy import array, zeros, logical_and, abs as nabs, concatenate, cross, std, sign, argmax
 from numpy.linalg import lstsq, norm
 from scipy.optimize import least_squares
 
@@ -144,14 +144,14 @@ class Center:
             # create the arguments to be passed to both the residual and jacobian calculation functions
             args = (prox_a[mask], dist_a[mask], prox_w[mask], dist_w[mask], prox_wd[mask], dist_wd[mask])
 
-            sol = least_squares(Center.compute_distance_residuals, r_init.flatten(), args=args, **self.opt_kwargs)
+            sol = least_squares(Center._compute_distance_residuals, r_init.flatten(), args=args, **self.opt_kwargs)
             r = sol.x
             residual = sol.cost
 
         return r[:3], r[3:], residual / mask.sum()
 
     @staticmethod
-    def compute_distance_residuals(r, a1, a2, w1, w2, wd1, wd2):
+    def _compute_distance_residuals(r, a1, a2, w1, w2, wd1, wd2):
         """
             Compute the residuals for the given joint center locations for proximal and distal inertial data
 
@@ -248,14 +248,14 @@ class KneeAxis:
             # arguments for the solver
         args = (thigh_w[mask], shank_w[mask])
         # solve and normalize the result
-        sol = least_squares(KneeAxis.compute_axis_residuals, j_init.flatten(), args=args, **self.opt_kwargs)
+        sol = least_squares(KneeAxis._compute_axis_residuals, j_init.flatten(), args=args, **self.opt_kwargs)
         thigh_j = sol.x[:3] / norm(sol.x[:3])
         shank_j = sol.x[3:] / norm(sol.x[3:])
 
         return thigh_j, shank_j
 
     @staticmethod
-    def compute_axis_residuals(j, thigh_w, shank_w):
+    def _compute_axis_residuals(j, thigh_w, shank_w):
         """
         Compute the residuals using the estimate of the axis.
 
@@ -280,5 +280,48 @@ class KneeAxis:
         wp2 = cross(shank_w, j2)
 
         return norm(wp1, axis=1) - norm(wp2, axis=1)
+
+
+def correct_knee(thigh_w, shank_w, thigh_r, shank_r, R_thigh_shank, knee_axis_kwargs={}):
+    """
+    Correct the knee position based on the computed knee axis.
+
+    Parameters
+    ----------
+    thigh_w : numpy.ndarray
+        Nx3 array of angular velocities measured by the thigh sensor.
+    shank_w : numpy.ndarray
+        Nx3 array of angular velocities measured by the shank sensor.
+    thigh_r : numpy.ndarray
+        Initial knee joint center to thigh sensor vector.
+    shank_r : numpy.ndarray
+        Initial knee joint center to shank sensor vector.
+    R_thigh_shank : numpy.ndarray
+        Rotation matrix from shank to thigh sensors.
+    knee_axis_kwargs : dict, optional
+        Knee axis computation key-word arguments. See KneeAxis.
+
+    Returns
+    -------
+    thigh_r_corr : numpy.ndarray
+        Corrected knee joint center to thigh sensor vector.
+    shank_r_corr : numpy.ndarray
+        Corrected knee joint center to shank sensor vector.
+    """
+    # compute the knee axis
+    ka = KneeAxis(**knee_axis_kwargs)
+    thigh_j, shank_j = ka.compute(thigh_w, shank_w)
+
+    # check the sign of the major component of the axes when rotated into the same frame
+    shank_j_thigh = R_thigh_shank @ shank_j
+    if sign(shank_j_thigh[argmax(nabs(shank_j_thigh))]) != sign(thigh_j[argmax(nabs(thigh_j))]):
+        shank_j *= -1
+
+    # compute the corrections for the joint centers
+    tmp = (sum(thigh_r * thigh_j) + sum(shank_r * shank_j)) / 2
+    thigh_r_corr = thigh_r - thigh_j * tmp
+    shank_r_corr = shank_r - shank_j * tmp
+
+    return thigh_r_corr, shank_r_corr
 
 
