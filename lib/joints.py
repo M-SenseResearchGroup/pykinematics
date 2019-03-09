@@ -325,3 +325,35 @@ def correct_knee(thigh_w, shank_w, thigh_r, shank_r, R_thigh_shank, knee_axis_kw
     return thigh_r_corr, shank_r_corr
 
 
+def fixed_axis(center1, center2, center_to_sensor=True):
+    """
+    Compute the fixed axis of a segment based on computed joint centers.
+
+    Parameters
+    ----------
+    center1 : numpy.ndarray
+        Location of the first joint center. This will be the "origin" of the axis, unless the locations provided
+        are vectors from joint center to sensor.
+    center2 : numpy.ndarray
+        Location of the second joint center. This will be the "end" of the axis, unless the locations provided are
+        vectors from joint center to sensor, in which case it will be the "origin".
+    center_to_sensor : bool, optional
+        If the vectors provided are joint center to sensor (opposite is sensor to joint center). If True, then the
+        axes are created in the opposite way as expected (eg right pointing pelvis axis would be left hip joint center
+        minus the right hip joint center). Default is True.
+
+    Returns
+    -------
+    axis : numpy.ndarray
+        Fixed axis based on joint centers.
+    """
+
+    if center_to_sensor:
+        axis = center1 - center2
+    else:
+        axis = center2 - center1
+
+    # normalize
+    axis /= norm(axis)
+    return axis
+
