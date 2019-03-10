@@ -9,6 +9,8 @@ V0.1 - March 8, 2019
 from numpy import zeros, sqrt
 from numpy.linalg import inv, cholesky, pinv
 
+__all__ = ['UnscentedKalmanFilter', 'GaussNewton']
+
 
 class UnscentedKalmanFilter:
     def __init__(self, x0, P0, F, H, Q, R):

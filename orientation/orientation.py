@@ -13,6 +13,9 @@ from .. import utility as U
 from ..optimize import UnscentedKalmanFilter
 
 
+__all__ = ['MadgwickAHRS', 'OrientationComplementaryFilter', 'SROFilter']
+
+
 class MadgwickAHRS:
     def __init__(self, sample_period=1/256, q_init=array([1, 0, 0, 0]), beta=0.041):
         """

@@ -6,10 +6,13 @@ Lukas Adamowicz
 
 V0.1 - March 8, 2019
 """
-from numpy import array, mean, ceil, cross, arctan2 as atan2, abs as nabs, sum, pi, stack
+from numpy import mean, ceil, cross
 from numpy.linalg import norm
 
 from .. import utility as U
+
+
+__all__ = ['get_acc_scale', 'process_static_calibration']
 
 
 def get_acc_scale(acc, gravity=9.81):

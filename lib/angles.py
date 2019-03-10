@@ -11,6 +11,9 @@ from numpy.linalg import norm
 from scipy.integrate import cumtrapz
 
 
+__all__ = ['hip_from_frames', 'hip_from_gyr']
+
+
 def hip_from_frames(pelvis_AF, thigh_AF, R, side, zero_angles=False):
     """
     Compute the hip joint angles from fixed and reference axes from the anatomical frames.
