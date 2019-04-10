@@ -1,17 +1,24 @@
+"""
+Methods that are common and needed accross both IMU and OMC methods
+
+GNU GPL v3.0
+Lukas Adamowicz
+V0.1 - April 10, 2019
+"""
 from numpy import cross, sum as nsum, arctan2 as atan2, arccos, abs as nabs, pi, stack
 from numpy.linalg import norm
 
 
-def hip(pelvis_AF, thigh_AF, side):
+def hip(pelvis_frames, thigh_frames, side):
     """
     Compute hip angles.
 
     Parameters
     ----------
-    pelvis_AF : numpy.ndarray
+    pelvis_frames : numpy.ndarray
         Nx3x3 array of anatomical frames of the pelvis in a world frame. N time samples of 3x3 matrices, of which the
         first column is the pelvis X-axis, second column is the pelvis Y-axis, and third column is the pelvis Z-axis
-    thigh_AF: numpy.ndarray
+    thigh_frames: numpy.ndarray
         Nx3x3 array of anatomical frames of the thigh for N time points in the world frame. Each 3x3 matrix is comprised
         of columns of thigh x-axis, y-axis, and z-axis, in that order.
 
@@ -31,12 +38,12 @@ def hip(pelvis_AF, thigh_AF, side):
     the knee." J. of Biomech. Engr. Vol. 105. 1983.
     """
     # extract the proximal (pelvis) segment axes
-    X = pelvis_AF[:, :, 0]
-    Z = pelvis_AF[:, :, 2]
+    X = pelvis_frames[:, :, 0]
+    Z = pelvis_frames[:, :, 2]
 
     # extract the distal (thigh) segment axes
-    x = thigh_AF[:, :, 0]
-    y = thigh_AF[:, :, 1]
+    x = thigh_frames[:, :, 0]
+    y = thigh_frames[:, :, 1]
 
     # create the hip joint axes
     e1 = Z.copy()

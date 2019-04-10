@@ -1,4 +1,12 @@
+"""
+Methods for calibration of OMC data.
+
+GNU GPL v3.0
+Lukas Adamowicz
+V0.1 - April 10, 2019
+"""
 from . import utility
+from .. import common
 
 
 def process_static(marker_data, marker_names, window):
@@ -8,6 +16,9 @@ def process_static(marker_data, marker_names, window):
 
     Parameters
     ----------
+    marker_data
+    marker_names
+    window
 
     Returns
     -------
@@ -16,34 +27,16 @@ def process_static(marker_data, marker_names, window):
     # find the most still period in the data, and the index of that window
     still_data, still_ind = utility.find_most_still(marker_data, window, return_index=True)
 
-    """
-    # aggregate all the marker data for the pelvis, thigh, and shank segments
-    data = tuple()
-    data += tuple(body.pelvis.mocap.mkrs[marker][trial] for marker in body.pelvis.mocap.mkr_names)
-    data += tuple(body.l_thigh.mocap.mkrs[marker][trial] for marker in body.l_thigh.mocap.mkr_names)
-    data += tuple(body.r_thigh.mocap.mkrs[marker][trial] for marker in body.r_thigh.mocap.mkr_names)
-    data += tuple(body.l_shank.mocap.mkrs[marker][trial] for marker in body.l_shank.mocap.mkr_names)
-    data += tuple(body.r_shank.mocap.mkrs[marker][trial] for marker in body.r_shank.mocap.mkr_names)
-
-    # find the most still period in the data, and the index of that window
-    still_data, still_ind = U.find_most_still(data, int(window * body.pelvis.mocap.fs[trial]), return_index=True)
-
-    # get a list of all the marker names in the same order as they appear in the still data
-    mkr_names = tuple()
-    mkr_names += tuple(marker for marker in body.pelvis.mocap.mkr_names)
-    mkr_names += tuple(marker for marker in body.l_thigh.mocap.mkr_names)
-    mkr_names += tuple(marker for marker in body.r_thigh.mocap.mkr_names)
-    mkr_names += tuple(marker for marker in body.l_shank.mocap.mkr_names)
-    mkr_names += tuple(marker for marker in body.r_shank.mocap.mkr_names)
-
-    # associate names with data
+    # associate names with the still data
     markers = dict()
-    for data, name in zip(still_data, mkr_names):
+    for data, name in zip(still_data, marker_names):
         markers[name] = data
 
     # -----------------------------------------------
     #              PELVIS
     # -----------------------------------------------
+    pelvis_o = utility.compute_segment_origin
+    """
     compute_segment_origin(body.pelvis, calibration=True, markers=(markers['left_asis'], markers['right_asis']))
 
     z = markers['right_asis'] - markers['left_asis']
