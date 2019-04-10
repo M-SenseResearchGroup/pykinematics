@@ -1,2 +1,2 @@
-from . import angles
-from . import calibration
+from pymotion.omc import angles
+from pymotion.omc import calibration

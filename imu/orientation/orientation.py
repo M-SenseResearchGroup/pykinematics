@@ -9,8 +9,8 @@ V0.1 - March 8, 2019
 from numpy import array, zeros, cross, sqrt, abs as nabs, arccos, sin, mean, identity, sum
 from numpy.linalg import norm
 
-from .. import utility as U
-from ..optimize import UnscentedKalmanFilter
+from pymotion.imu import utility
+from pymotion.imu.optimize import UnscentedKalmanFilter
 
 
 __all__ = ['MadgwickAHRS', 'OrientationComplementaryFilter', 'SROFilter']
@@ -67,7 +67,7 @@ class MadgwickAHRS:
         h = mag / norm(mag)
 
         # reference direction of earth's magnetic field
-        h_ref = U.quat_mult(q, U.quat_mult(array([0, h[0], h[1], h[2]]), U.quat_conj(q)))
+        h_ref = utility.quat_mult(q, utility.quat_mult(array([0, h[0], h[1], h[2]]), utility.quat_conj(q)))
         b = array([0, norm(h_ref[1:3]), 0, h_ref[3]])
 
         # Gradient Descent algorithm corrective step
@@ -88,7 +88,7 @@ class MadgwickAHRS:
         step /= norm(step)  # normalize step magnitude
 
         # compute rate of change of quaternion
-        qDot = 0.5 * U.quat_mult(q, array([0, gyr[0], gyr[1], gyr[2]])) - self.beta * step
+        qDot = 0.5 * utility.quat_mult(q, array([0, gyr[0], gyr[1], gyr[2]])) - self.beta * step
 
         # integrate to yeild quaternion
         self.q = q + qDot * self.sample_period
@@ -125,7 +125,7 @@ class MadgwickAHRS:
         step /= norm(step)  # normalise step magnitude
 
         # compute rate of change quaternion
-        q_dot = 0.5 * U.quat_mult(q, array([0, gyr[0], gyr[1], gyr[2]])) - self.beta * step
+        q_dot = 0.5 * utility.quat_mult(q, array([0, gyr[0], gyr[1], gyr[2]])) - self.beta * step
 
         # integrate to yeild quaternion
         q = q + q_dot * self.sample_period
@@ -262,7 +262,7 @@ class OrientationComplementaryFilter:
             # interpolate the acceleration based correction
             dq_acc_int = self.get_scaled_quaternion(dq_acc, alpha)
 
-            q_pred_acorr = U.quat_mult(q_pred, dq_acc_int)
+            q_pred_acorr = utility.quat_mult(q_pred, dq_acc_int)
 
             # get the magnetometer based correction
             dq_mag = self.get_mag_correction(q_pred_acorr, i)
@@ -271,7 +271,7 @@ class OrientationComplementaryFilter:
             dq_mag_int = self.get_scaled_quaternion(dq_mag, self.beta)
 
             # correct the prediction resulting in final estimate
-            self.q = U.quat_mult(q_pred_acorr, dq_mag_int)
+            self.q = utility.quat_mult(q_pred_acorr, dq_mag_int)
 
             # normalize estimate
             self.q /= norm(self.q)
@@ -290,7 +290,7 @@ class OrientationComplementaryFilter:
             b = sqrt(1 - self.a[ind, 2])
             q_acc = array([-self.a[ind, 1] / (sqrt(2) * b), b / sqrt(2), 0, self.a[ind, 0] / (sqrt(2) * b)])
 
-        l = U.quat2matrix(q_acc).T @ self.h[ind]
+        l = utility.quat2matrix(q_acc).T @ self.h[ind]
         Gamma = l[0]**2 + l[1]**2
 
         if l[0] >= 0:
@@ -300,7 +300,7 @@ class OrientationComplementaryFilter:
             b = sqrt(Gamma - l[0] * sqrt(Gamma))
             q_mag = array([l[1] / (sqrt(2) * b), 0, 0, b / sqrt(2 * Gamma)])
 
-        q_meas = U.quat_mult(q_acc, q_mag)
+        q_meas = utility.quat_mult(q_acc, q_mag)
         return q_meas
 
     def get_state(self, ind):
@@ -385,7 +385,7 @@ class OrientationComplementaryFilter:
             Quaternion correction.
         """
         # compute the predicted gravity vector
-        gp = U.quat2matrix(U.quat_inv(q_pred)) @ self.a[ind]
+        gp = utility.quat2matrix(utility.quat_inv(q_pred)) @ self.a[ind]
         gp /= norm(gp)
         # compute the correction quaternion
         # b = sqrt(gp[2] + 1)
@@ -413,7 +413,7 @@ class OrientationComplementaryFilter:
             Quaternion correction
         """
         # rotate the magnetic field vector into the current orientation estimate
-        l = U.quat2matrix(U.quat_inv(q_pred)) @ self.h[ind]
+        l = utility.quat2matrix(utility.quat_inv(q_pred)) @ self.h[ind]
         l /= norm(l)
         Gamma = l[0]**2 + l[1]**2
 
@@ -565,8 +565,8 @@ class SROFilter:
         s2_a0 = mean(s2_a[:self.init_window], axis=0)
 
         # get the rotation from the initial accelerations to the global gravity vector
-        s1_q_init = U.vec2quat(s1_a0, array([0, 0, 1]))
-        s2_q_init = U.vec2quat(s2_a0, array([0, 0, 1]))
+        s1_q_init = utility.vec2quat(s1_a0, array([0, 0, 1]))
+        s2_q_init = utility.vec2quat(s2_a0, array([0, 0, 1]))
 
         # setup the AHRS algorithms
         s1_ahrs = MadgwickAHRS(dt, q_init=s1_q_init, beta=self.s1_ahrs_beta)
@@ -580,8 +580,8 @@ class SROFilter:
             s2_q[i] = s2_ahrs.updateIMU(s2_w[i], s2_a[i] / self.g)
 
         # get the gravity axis from the rotation matrices
-        s1_z = U.quat2matrix(s1_q)[:, 2, :]
-        s2_z = U.quat2matrix(s2_q)[:, 2, :]
+        s1_z = utility.quat2matrix(s1_q)[:, 2, :]
+        s2_z = utility.quat2matrix(s2_q)[:, 2, :]
 
         # get the magnetometer readings that are not in the direction of gravity
         s1_m = s1_h - sum(s1_h * s1_z, axis=1, keepdims=True) * s1_z
@@ -589,11 +589,11 @@ class SROFilter:
 
         # get the initial guess for the orientation.  Used to initialize the UKF
         # Initial guess from aligning gravity axes
-        q_z_init = U.vec2quat(s2_z[0], s1_z[0])
+        q_z_init = utility.vec2quat(s2_z[0], s1_z[0])
         # Initial guess from aligning non-gravity vector magnetometer readings
-        q_m_init = U.vec2quat(U.quat2matrix(q_z_init) @ s2_m[0], s1_m[0])
+        q_m_init = utility.vec2quat(utility.quat2matrix(q_z_init) @ s2_m[0], s1_m[0])
 
-        q_init = U.quat_mult(q_m_init, q_z_init)
+        q_init = utility.quat_mult(q_m_init, q_z_init)
 
         # Initial Kalman Filter parameters
         P_init = identity(4) * 0.1  # assume our initial guess is fairly good
@@ -606,10 +606,10 @@ class SROFilter:
         self.err = zeros(n)
         for i in range(1, n):
             # get the measurement guess for the orientation
-            q_z = U.vec2quat(s2_z[i], s1_z[i])
-            q_m = U.vec2quat(U.quat2matrix(q_z) @ s2_m[i], s1_m[i])
+            q_z = utility.vec2quat(s2_z[i], s1_z[i])
+            q_m = utility.vec2quat(utility.quat2matrix(q_z) @ s2_m[i], s1_m[i])
 
-            q = U.quat_mult(q_m, q_z).reshape((4, 1))
+            q = utility.quat_mult(q_m, q_z).reshape((4, 1))
 
             # get an estimate of the measurement error, based on how dynamic the motion is
             err = abs(norm(s1_a[i]) - self.g) + abs(norm(s2_a[i]) - self.g)
@@ -630,7 +630,7 @@ class SROFilter:
             q = self.q_.copy()
             pad = 16
             for i in range(pad, self.q_.shape[0]-pad):
-                self.q_[i] = U.quat_mean(q[i - pad:i + pad, :])
+                self.q_[i] = utility.quat_mean(q[i - pad:i + pad, :])
 
         return self.q_
 
@@ -660,14 +660,14 @@ class SROFilter:
         # iterate over the sigma point variations of the state vector
         for i in range(x.shape[1]):
             # rotate the proximal angular velocity into the distal frame
-            s2_s1_w = U.quat2matrix(x[:, i]).T @ s1_w
+            s2_s1_w = utility.quat2matrix(x[:, i]).T @ s1_w
 
             # create the angular velocity quaternion which is used in the quaternion gradient calculation. The relative
             # angular velocity is distal - proximal as the relative orientation is in that direction.
             rot_q[1:] = s2_w - s2_s1_w  # rot_q = [0, wx, wy, wz]
 
             # calculate the quaternion gradient
-            x_grad = U.quat_mult(x[:, i], rot_q)
+            x_grad = utility.quat_mult(x[:, i], rot_q)
             xp[:, i] = x[:, i] + 0.5 * dt * x_grad
 
         return xp

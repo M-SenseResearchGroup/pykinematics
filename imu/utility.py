@@ -6,7 +6,7 @@ Lukas Adamowicz
 
 V0.1 - March 8, 2019
 """
-from numpy import array, argmin, zeros, ceil, mean, std, sqrt, argsort, dot, arccos, cross, cos, sin
+from numpy import array, zeros, argsort, dot, arccos, cross, cos, sin
 from numpy.linalg import norm, eig
 
 

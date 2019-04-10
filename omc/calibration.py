@@ -5,8 +5,8 @@ GNU GPL v3.0
 Lukas Adamowicz
 V0.1 - April 10, 2019
 """
-from . import utility
-from .. import common
+from pymotion.omc import utility
+from pymotion import common
 
 
 def process_static(marker_data, marker_names, window):

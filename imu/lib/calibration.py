@@ -9,7 +9,8 @@ V0.1 - March 8, 2019
 from numpy import mean, ceil, cross
 from numpy.linalg import norm
 
-from .. import utility as U
+from pymotion.imu import utility
+from pymotion import common
 
 
 __all__ = ['get_acc_scale', 'process_static_calibration']
@@ -76,20 +77,20 @@ def process_static_calibration(lt_p_q, rt_p_q, pelvis_axis, l_thigh_axis, r_thig
     """
 
     # find the most still period in the angular velocity data of the pelvis and thighs
-    _, ind = U.find_most_still((pelvis_w, l_thigh_w, r_thigh_w), int(window * fs), return_index=True)
+    _, ind = common.find_most_still((pelvis_w, l_thigh_w, r_thigh_w), int(window * fs), return_index=True)
 
     pad = int(ceil(window * fs / 2))
 
     # compute the rotations during the most still time
     if (ind - pad) < 0:
-        l_q_mean = U.quat_mean(lt_p_q[:ind + pad, :])
-        r_q_mean = U.quat_mean(rt_p_q[:ind + pad, :])
+        l_q_mean = utility.quat_mean(lt_p_q[:ind + pad, :])
+        r_q_mean = utility.quat_mean(rt_p_q[:ind + pad, :])
     else:
-        l_q_mean = U.quat_mean(lt_p_q[ind - pad:ind + pad, :])
-        r_q_mean = U.quat_mean(rt_p_q[ind - pad:ind + pad, :])
+        l_q_mean = utility.quat_mean(lt_p_q[ind - pad:ind + pad, :])
+        r_q_mean = utility.quat_mean(rt_p_q[ind - pad:ind + pad, :])
 
-    lt_p_R = U.quat2matrix(l_q_mean)
-    rt_p_R = U.quat2matrix(r_q_mean)
+    lt_p_R = utility.quat2matrix(l_q_mean)
+    rt_p_R = utility.quat2matrix(r_q_mean)
 
     # compute the left and right hip coordinate systems
     l_e1 = pelvis_axis
