@@ -25,7 +25,7 @@ def process_static(marker_data, marker_names, window):
 
     """
     # find the most still period in the data, and the index of that window
-    still_data, still_ind = utility.find_most_still(marker_data, window, return_index=True)
+    still_data, still_ind = common.find_most_still(marker_data, window, return_index=True)
 
     # associate names with the still data
     markers = dict()
