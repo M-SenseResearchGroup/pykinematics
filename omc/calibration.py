@@ -194,7 +194,7 @@ def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, ri
 
     # create the anatomical axes
     pelvis_z = markers[names.right_asis] - markers[names.left_asis]
-    pelvis_z / norm(pelvis_z)
+    pelvis_z /= norm(pelvis_z)
 
     mid_psis = (markers[names.right_psis] + markers[names.left_psis]) / 2
 
