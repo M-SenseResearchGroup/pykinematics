@@ -9,6 +9,7 @@ from numpy import cross, stack, zeros, isnan, sum as nsum, array, mean
 from numpy.linalg import norm, solve
 
 from pymotion.omc import utility
+from pymotion.omc import segmentFrames
 from pymotion import common
 
 
@@ -190,6 +191,7 @@ def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, ri
     # -----------------------------------------------
     #              PELVIS
     # -----------------------------------------------
+    """
     pelvis_o = utility.compute_pelvis_origin(markers[names.left_asis], markers[names.right_asis])
 
     # create the anatomical axes
@@ -205,10 +207,11 @@ def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, ri
 
     pelvis_x = cross(pelvis_y, pelvis_z)
     pelvis_x /= norm(pelvis_x)
-
+    """
     # create a matrix with columns as the x, y, z, axes of the anatomical frame
     # this is also the rotation matrix from world to segment frame
-    pelvis_af = stack((pelvis_x, pelvis_y, pelvis_z), axis=1)
+    # pelvis_af = stack((pelvis_x, pelvis_y, pelvis_z), axis=1)
+    pelvis_af = segmentFrames.pelvis(markers, use_cluster=False, marker_names=names)
 
     # create the cluster frame
     pelvis_R_w_c = utility.create_cluster_frame(pelvis_data, 'pelvis', marker_names=names)
@@ -222,6 +225,7 @@ def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, ri
     # first transform the left hip joint center coordinates back into the world frame
     right_hjc = (pelvis_R_w_c.T @ (right_c_pc
                                    + right_thigh_data[names.right_thigh_c2]).reshape((-1, 3, 1))).reshape((-1, 3))
+    """
     # compute the midpoint of the epicondyles
     mid_ep = (right_thigh_data[names.right_lep] + right_thigh_data[names.right_mep]) / 2
 
@@ -236,9 +240,10 @@ def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, ri
 
     rthigh_z = cross(rthigh_x, rthigh_y)
     rthigh_z /= norm(rthigh_z)
-
+    """
     # create the anatomical frame matrix, also the world to left thigh rotation matrix
-    rthigh_af = stack((rthigh_x, rthigh_y, rthigh_z), axis=1)
+    # rthigh_af = stack((rthigh_x, rthigh_y, rthigh_z), axis=1)
+    rthigh_af = segmentFrames.thigh(markers, 'right', use_cluster=False, hip_joint_center=right_hjc, marker_names=names)
 
     # compute the cluster orientation
     rthigh_R_w_c = utility.create_cluster_frame(right_thigh_data, 'right_thigh', names)
@@ -252,6 +257,7 @@ def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, ri
     # first transform the left hip joint center coordinates back into the world frame
     left_hjc = (pelvis_R_w_c.T @ (left_c_pc
                                   + left_thigh_data[names.left_thigh_c2]).reshape((-1, 3, 1))).reshape((-1, 3))
+    """
     # compute the midpoint of the epicondyles
     mid_ep = (left_thigh_data[names.left_lep] + left_thigh_data[names.left_mep]) / 2
 
@@ -266,9 +272,10 @@ def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, ri
 
     lthigh_z = cross(lthigh_x, lthigh_y)
     lthigh_z /= norm(lthigh_z)
-
+    """
     # create the anatomical frame matrix, also the world to left thigh rotation matrix
-    lthigh_af = stack((lthigh_x, lthigh_y, lthigh_z), axis=1)
+    # lthigh_af = stack((lthigh_x, lthigh_y, lthigh_z), axis=1)
+    lthigh_af = segmentFrames.thigh(markers, 'left', use_cluster=False, hip_joint_center=left_hjc, marker_names=names)
 
     # compute the cluster orientation
     lthigh_R_w_c = utility.create_cluster_frame(left_thigh_data, 'left_thigh', names)

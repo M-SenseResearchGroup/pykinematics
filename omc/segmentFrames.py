@@ -68,3 +68,72 @@ def pelvis(marker_data, use_cluster=False, R_s_c=None, marker_names='default'):
         pelvis_af = stack((x, y, z), axis=1) if x.ndim == 1 else stack((x, y, z), axis=2)
 
     return pelvis_af
+
+
+def thigh(marker_data, side, use_cluster=False, R_s_c=None, hip_joint_center=None, marker_names='default'):
+    """
+    Create the pelvis anatomical frame.
+
+    Parameters
+    ----------
+    marker_data : dictionary
+        Dictionary of thigh marker position data. Keys correspond to marker names
+    side : {'left', 'right'}
+        Thigh side.
+    use_cluster : bool, optional
+        Use the cluster to segment rotation to compute the anatomical frame. Default is False.
+    R_s_c : {None, numpy.ndarray}, optional
+        If use_cluster is False, R_s_c is ignored. If use_cluster is True, then a 3x3 rotation matrix must be provided
+        that is the rotation from the segment to cluster frame for the pelvis.
+    hip_joint_center : {None, numpy.ndarray}, optional
+        If use_cluster is False, hip_joint_center must be the location of the hip joint center in the world frame. If
+        use_cluster is True, then it is ignored.
+    marker_names : {'default', pymotion.omc.utility.MarkerNames}, optional
+        Either 'default', which will use the default marker names, or a modified MarkerNames object, with marker names
+        as used in the keys of marker_data
+
+    Returns
+    -------
+    thigh_af : numpy.ndarray
+        3x3 matrix representing the thigh anatomical frame. Also is the rotation from world frame into the thigh
+        anatomical frame. Columns are the x, y, z axes of the anatomical frame.
+    """
+    # get marker names
+    if marker_names == 'default':
+        names = utility.MarkerNames
+    else:
+        names = marker_names
+
+    if use_cluster:
+        # first compute the cluster orientation
+        R_w_c = utility.create_cluster_frame(marker_data, 'pelvis', names)
+
+        # compute the anatomical frame matrix, which is the world to segment rotation matrix
+        thigh_af = R_s_c.T @ R_w_c
+
+    else:
+        # compute the midpoint of the epicondyles
+        mid_ep = (marker_data[names.right_lep] + marker_data[names.right_mep]) / 2
+
+        # create the axes
+        y = hip_joint_center - mid_ep
+        y /= norm(y)
+
+        if side == 'right':
+            z_tmp = marker_data[names.right_lep] - marker_data[names.right_mep]
+        elif side == 'left':
+            z_tmp = marker_data[names.left_mep] - marker_data[names.left_lep]
+        else:
+            raise ValueError('side must be either "left" or "right".')
+
+        x = cross(y, z_tmp)
+        x /= norm(x)
+
+        z = cross(x, y)
+        z /= norm(z)
+
+        # create the anatomical frame matrix, also the world to left thigh rotation matrix
+        thigh_af = stack((x, y, z), axis=1)
+
+    return thigh_af
+
