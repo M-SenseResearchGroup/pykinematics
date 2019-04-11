@@ -70,7 +70,7 @@ def pelvis(marker_data, use_cluster=False, R_s_c=None, marker_names='default'):
     return pelvis_af
 
 
-def thigh(marker_data, side, use_cluster=False, R_s_c=None, hip_joint_center=None, marker_names='default'):
+def thigh(marker_data, side, use_cluster=True, R_s_c=None, hip_joint_center=None, marker_names='default'):
     """
     Create the pelvis anatomical frame.
 
@@ -81,7 +81,7 @@ def thigh(marker_data, side, use_cluster=False, R_s_c=None, hip_joint_center=Non
     side : {'left', 'right'}
         Thigh side.
     use_cluster : bool, optional
-        Use the cluster to segment rotation to compute the anatomical frame. Default is False.
+        Use the cluster to segment rotation to compute the anatomical frame. Default is True.
     R_s_c : {None, numpy.ndarray}, optional
         If use_cluster is False, R_s_c is ignored. If use_cluster is True, then a 3x3 rotation matrix must be provided
         that is the rotation from the segment to cluster frame for the pelvis.
