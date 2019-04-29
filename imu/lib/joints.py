@@ -6,7 +6,7 @@ Lukas Adamowicz
 
 V0.1 - March 8, 2019
 """
-from numpy import array, zeros, logical_and, abs as nabs, concatenate, cross, std, sign, argmax
+from numpy import array, zeros, logical_and, abs as nabs, concatenate, cross, std, sign, argmax, sqrt
 from numpy.linalg import lstsq, norm
 from scipy.optimize import least_squares
 
@@ -15,7 +15,7 @@ __all__ = ['Center', 'KneeAxis', 'correct_knee', 'fixed_axis']
 
 
 class Center:
-    def __init__(self, g=9.81, method='SAC', mask_input=True, min_samples=1000, opt_kwargs={}):
+    def __init__(self, g=9.81, method='SAC', mask_input=True, min_samples=1000, mask_data='acc', opt_kwargs={}):
         """
         Object for joint center computation
 
@@ -30,6 +30,8 @@ class Center:
             Mask the input to only use the highest acceleration samples. Default is True
         min_samples : int, optional
             Minimum number of samples to use. Default is 1000.
+        mask_data : {'acc', 'gyr'}
+            Data to use for masking. Default is acceleration.
         opt_kwargs : dict, optional
             Optimization key-word arguments. SAC uses numpy.linalg.lstsq.
             SSFC and SSFCv use scipy.optimize.least_squares.
@@ -43,6 +45,7 @@ class Center:
         self.method = method
         self.mask_input = mask_input
         self.min_samples = min_samples
+        self.mask_data = mask_data
         self.opt_kwargs = opt_kwargs
 
     def compute(self, prox_a, dist_a, prox_w, dist_w, prox_wd, dist_wd, R_dist_prox):
@@ -77,13 +80,21 @@ class Center:
         """
         if self.method == 'SAC':
             if self.mask_input:
-                prox_an = norm(prox_a, axis=1) - self.g
-                dist_an = norm(dist_a, axis=1) - self.g
+                if self.mask_data == 'acc':
+                    prox_data = norm(prox_a, axis=1) - self.g
+                    dist_data = norm(dist_a, axis=1) - self.g
+                    thresh = 1.0
+                elif self.mask_data == 'gyr':
+                    prox_data = norm(prox_w, axis=1)
+                    dist_data = norm(dist_w, axis=1)
+                    thresh = 2.0
+                else:
+                    raise ValueError('mask_data must be either (acc) or (gyr)')
 
-                mask = zeros(prox_an.shape, dtype=bool)
-                thresh = 0.8
+                mask = zeros(prox_data.shape, dtype=bool)
+
                 while mask.sum() < self.min_samples:
-                    mask = logical_and(nabs(prox_an) > thresh, nabs(dist_an) > thresh)
+                    mask = logical_and(nabs(prox_data) > thresh, nabs(dist_data) > thresh)
 
                     thresh -= 0.05
                     if thresh < 0.09:
@@ -231,7 +242,7 @@ class KneeAxis:
         shank_j : numpy.ndarray
             Vector of the joint rotation axis in the shank sensor frame.
         """
-        j_init = zeros(6)
+        j_init = (zeros(6) + 1) / sqrt(3)
 
         if self.mask_input:
             thigh_wn = norm(thigh_w, axis=1)
@@ -285,7 +296,7 @@ class KneeAxis:
         return norm(wp1, axis=1) - norm(wp2, axis=1)
 
 
-def correct_knee(thigh_w, shank_w, thigh_r, shank_r, R_thigh_shank, knee_axis_kwargs={}):
+def correct_knee(thigh_w, shank_w, thigh_r, shank_r, R_shank_thigh, knee_axis_kwargs={}):
     """
     Correct the knee position based on the computed knee axis.
 
@@ -299,7 +310,7 @@ def correct_knee(thigh_w, shank_w, thigh_r, shank_r, R_thigh_shank, knee_axis_kw
         Initial knee joint center to thigh sensor vector.
     shank_r : numpy.ndarray
         Initial knee joint center to shank sensor vector.
-    R_thigh_shank : numpy.ndarray
+    R_shank_thigh : numpy.ndarray
         Rotation matrix from shank to thigh sensors.
     knee_axis_kwargs : dict, optional
         Knee axis computation key-word arguments. See KneeAxis.
@@ -316,7 +327,7 @@ def correct_knee(thigh_w, shank_w, thigh_r, shank_r, R_thigh_shank, knee_axis_kw
     thigh_j, shank_j = ka.compute(thigh_w, shank_w)
 
     # check the sign of the major component of the axes when rotated into the same frame
-    shank_j_thigh = R_thigh_shank @ shank_j
+    shank_j_thigh = R_shank_thigh @ shank_j
     if sign(shank_j_thigh[argmax(nabs(shank_j_thigh))]) != sign(thigh_j[argmax(nabs(thigh_j))]):
         shank_j *= -1
 
@@ -335,11 +346,9 @@ def fixed_axis(center1, center2, center_to_sensor=True):
     Parameters
     ----------
     center1 : numpy.ndarray
-        Location of the first joint center. This will be the "origin" of the axis, unless the locations provided
-        are vectors from joint center to sensor.
+        Location of the first joint center. This will be the "origin" of the axis.
     center2 : numpy.ndarray
-        Location of the second joint center. This will be the "end" of the axis, unless the locations provided are
-        vectors from joint center to sensor, in which case it will be the "origin".
+        Location of the second joint center. This will be the "end" of the axis.
     center_to_sensor : bool, optional
         If the vectors provided are joint center to sensor (opposite is sensor to joint center). If True, then the
         axes are created in the opposite way as expected (eg right pointing pelvis axis would be left hip joint center

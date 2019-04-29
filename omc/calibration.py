@@ -13,7 +13,7 @@ from pymotion.omc import segmentFrames
 from pymotion import common
 
 
-def compute_hip_center(pelvis_data, thigh_data, side, marker_names='default', tol=1e-4):
+def compute_hip_center(pelvis_data, thigh_data, R, origin, marker_names='default', tol=1e-4):
     """
     Compute the hip joint center location using a bias compensated least squares estimation.
 
@@ -23,8 +23,11 @@ def compute_hip_center(pelvis_data, thigh_data, side, marker_names='default', to
         Dictionary of all the marker data for the pelvis. Each key is a marker name.
     thigh_data : dict
         Dictionary of all the marker data for the thigh. Each key is a marker name
-    side : {'left', 'right'}
-        Side for the thigh. Either 'left' or 'right'.
+    R : numpy.ndarray
+        Rotation matrix or array of rotation matrices representing the rotation from world to local reference frame.
+    origin : numpy.ndarray
+        Vector of the origin position to use when rotating and transforming the marker positions into a local
+        reference frame.
     marker_names : {'default', MarkerNames}, optional
         Either 'default' to use the default marker names, or a MarkerNames object with the names used in pelvis_data
         and thigh_data specified.
@@ -34,8 +37,7 @@ def compute_hip_center(pelvis_data, thigh_data, side, marker_names='default', to
     Returns
     -------
     c : numpy.ndarray
-        Vector from the pelvis cluster origin (cluster marker 2) to the joint center between the pelvis and thigh,
-        expressed in the pelvis cluster reference frame.
+        Vector from the provided origin to the joint center, expressed in the local reference frame.
 
     References
     ----------
@@ -49,20 +51,9 @@ def compute_hip_center(pelvis_data, thigh_data, side, marker_names='default', to
     else:
         names = marker_names
 
-    # compute the pelvis cluster orientation matrix
-    R_w_c = utility.create_cluster_frame(pelvis_data, 'pelvis', names)
-
-    # get the origin marker name
-    if side == 'left':
-        o_name = names.left_thigh_c2
-    elif side == 'right':
-        o_name = names.right_thigh_c2
-    else:
-        raise ValueError('side must be "left" or "right".')
-
     # create a mask for NaN values
-    mask = ~isnan(R_w_c).any(axis=2).any(axis=1)  # check the world to cluster rotation
-    mask &= ~isnan(thigh_data[o_name]).any(axis=1)  # check the thigh cluster origin
+    mask = ~isnan(R).any(axis=2).any(axis=1)  # check the world to local frame rotation
+    mask &= ~isnan(pelvis_data[names.pelvis_c2]).any(axis=1)  # check the thigh cluster origin
 
     # check all the marker data for nan as all the data has to be the same length
     for mkr in thigh_data.keys():
@@ -71,8 +62,8 @@ def compute_hip_center(pelvis_data, thigh_data, side, marker_names='default', to
     # translate and rotate all the thigh marker coordinates into the cluster reference frame
     thigh_rot = dict()
     for mkr in thigh_data.keys():
-        thigh_rot[mkr] = (R_w_c[mask] @ (thigh_data[mkr][mask]
-                                         - thigh_data[o_name][mask]).reshape((-1, 3, 1))).reshape((-1, 3))
+        thigh_rot[mkr] = (R[mask] @ (thigh_data[mkr][mask]
+                                     - pelvis_data[names.pelvis_c2][mask]).reshape((-1, 3, 1))).reshape((-1, 3))
 
     n = mask.sum()  # number of samples
     m = len(thigh_rot.keys())  # number of markers
@@ -110,14 +101,14 @@ def compute_hip_center(pelvis_data, thigh_data, side, marker_names='default', to
     while (delta_c > tol).any():
         sigma2 = zeros(len(thigh_rot.keys()))
         for i, mk in enumerate(thigh_rot.keys()):
-            u = thigh_rot[mk] - c
+            u = thigh_rot[mk].reshape((-1, 3, 1)) - c
             u2bar = 1 / u.shape[0] * nsum(u.transpose([0, 2, 1]) @ u, axis=0)
             sigma2[i] = 1 / (4 * u2bar * u.shape[0]) * nsum((nsum(u * u, axis=1) - u2bar) ** 2)
 
         sigma2avg = mean(sigma2)
         delta_b = zeros((3, 1))
         for mk in thigh_rot.keys():
-            delta_b += 1 / thigh_rot[mk].shape[0] * nsum(thigh_rot[mk] - c, axis=0)
+            delta_b += 1 / thigh_rot[mk].shape[0] * nsum(thigh_rot[mk].reshape((-1, 3, 1)) - c, axis=0)
 
         delta_b *= 2 * sigma2avg
 
@@ -129,7 +120,7 @@ def compute_hip_center(pelvis_data, thigh_data, side, marker_names='default', to
     return c
 
 
-def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, right_c_pc, window,
+def process_static(static_data, hip_center_data, window,
                    marker_names='default'):
     """
     Process data from a static calibration trial to create the anatomical frames and create constant cluster to
@@ -137,18 +128,13 @@ def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, ri
 
     Parameters
     ----------
-    pelvis_data : dictionary
-        Dictionary of marker data for the pelvis. Each key is the name of the marker.
-    left_thigh_data : dictionary
-        Dictionary of marker data for the left thigh. Each key is the name of the marker.
-    right_thigh_data : dictionary
-        Dictionary of marker data for the right thigh. Each key is the name of the marker.
-    left_c_pc : numpy.ndarray
-        Vector from the pelvis cluster reference frame origin to the left hip joint center, expressed in the
-        pelvis cluster reference frame.
-    right_c_pc : numpy.ndarray
-        Vector from the pelvis cluster reference frame origin to the right hip joint center, expressed in the
-        pelvis cluster reference frame.
+    static_data : tuple
+        3-tuple of dictionaries. The first is the dictionary of pelvis data, the second is the dictionary of
+        left-thigh data, and the third is the dictionary of right-thigh data during a static standing trial.
+    hip_center_data : tuple
+        3-tuple of dictionaries. The first is the dictionary of pelvis data, the second is the dictionary of
+        left-thigh data, and the third is the dictionary of right-thigh data during a trial where the hip
+        joint center can be calculated (enough rotation in axes is present to compute the joint center).
     window : int
         Number of samples to window over for finding the most still section of data. Suggested is 1 second worth of
         samples.
@@ -168,6 +154,10 @@ def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, ri
         3-tuple of right thigh anatomical frame, rotation from world to the right thigh cluster frame, and constant
         rotation from segment frame to cluster frame.
     """
+    # extract the data from the tuples
+    pelvis_data, left_thigh_data, right_thigh_data = static_data
+    pelvis_jc_data, left_thigh_jc_data, right_thigh_jc_data = hip_center_data
+
     # separate the data from the names
     raw_data = tuple(pelvis_data[name] for name in pelvis_data.keys()) \
                + tuple(left_thigh_data[name] for name in left_thigh_data.keys()) \
@@ -191,99 +181,65 @@ def process_static(pelvis_data, left_thigh_data, right_thigh_data, left_c_pc, ri
     # -----------------------------------------------
     #              PELVIS
     # -----------------------------------------------
-    """
+    # compute the pelvis origin, will be needed later
     pelvis_o = utility.compute_pelvis_origin(markers[names.left_asis], markers[names.right_asis])
 
-    # create the anatomical axes
-    pelvis_z = markers[names.right_asis] - markers[names.left_asis]
-    pelvis_z /= norm(pelvis_z)
-
-    mid_psis = (markers[names.right_psis] + markers[names.left_psis]) / 2
-
-    pelvis_x_tmp = pelvis_o - mid_psis
-
-    pelvis_y = cross(pelvis_z, pelvis_x_tmp)
-    pelvis_y /= norm(pelvis_y)
-
-    pelvis_x = cross(pelvis_y, pelvis_z)
-    pelvis_x /= norm(pelvis_x)
-    """
     # create a matrix with columns as the x, y, z, axes of the anatomical frame
-    # this is also the rotation matrix from world to segment frame
-    # pelvis_af = stack((pelvis_x, pelvis_y, pelvis_z), axis=1)
+    # this is also the rotation matrix from pelvis frame to world frame
     pelvis_af = segmentFrames.pelvis(markers, use_cluster=False, marker_names=names)
 
     # create the cluster frame
-    pelvis_R_w_c = utility.create_cluster_frame(pelvis_data, 'pelvis', marker_names=names)
+    pelvis_R_c_w = utility.create_cluster_frame(markers, 'pelvis', marker_names=names)
 
     # create the constant segment to cluster rotation matrix
-    pelvis_R_s_c = pelvis_R_w_c @ pelvis_af.T
+    pelvis_R_s_c = pelvis_R_c_w.T @ pelvis_af
+
+    # -----------------------------------------------
+    #              JOINT CENTERS
+    # -----------------------------------------------
+    # first compute the anatomical frame using the data provided for joint center computation
+    pelvis_jc_af = segmentFrames.pelvis(pelvis_jc_data, use_cluster=False, marker_names=names)
+
+    # compute the origin using the data provided for joint center computation
+    pelvis_jc_o = utility.compute_pelvis_origin(pelvis_jc_data[names.left_asis], pelvis_jc_data[names.right_asis])
+
+    # compute the joint center locations in the pelvis frame
+    right_jc_p = compute_hip_center(pelvis_jc_data, right_thigh_jc_data, pelvis_jc_af.transpose([0, 2, 1]), pelvis_jc_o,
+                                    marker_names=names)
+    left_jc_p = compute_hip_center(pelvis_jc_data, left_thigh_jc_data, pelvis_jc_af.transpose([0, 2, 1]), pelvis_jc_o,
+                                   marker_names=names)
 
     # -----------------------------------------------
     #              Right THIGH
     # -----------------------------------------------
     # first transform the left hip joint center coordinates back into the world frame
-    right_hjc = (pelvis_R_w_c.T @ (right_c_pc
-                                   + right_thigh_data[names.right_thigh_c2]).reshape((-1, 3, 1))).reshape((-1, 3))
-    """
-    # compute the midpoint of the epicondyles
-    mid_ep = (right_thigh_data[names.right_lep] + right_thigh_data[names.right_mep]) / 2
+    right_hjc = pelvis_af @ right_jc_p.flatten() + pelvis_o
 
-    # create the axes
-    rthigh_y = right_hjc - mid_ep
-    rthigh_y /= norm(rthigh_y)
-
-    z_tmp = right_thigh_data[names.right_lep] - right_thigh_data[names.right_mep]
-
-    rthigh_x = cross(rthigh_y, z_tmp)
-    rthigh_x /= norm(rthigh_x)
-
-    rthigh_z = cross(rthigh_x, rthigh_y)
-    rthigh_z /= norm(rthigh_z)
-    """
-    # create the anatomical frame matrix, also the world to left thigh rotation matrix
-    # rthigh_af = stack((rthigh_x, rthigh_y, rthigh_z), axis=1)
+    # create the anatomical frame matrix, also the left thigh to world rotation matrix
     rthigh_af = segmentFrames.thigh(markers, 'right', use_cluster=False, hip_joint_center=right_hjc, marker_names=names)
 
-    # compute the cluster orientation
-    rthigh_R_w_c = utility.create_cluster_frame(right_thigh_data, 'right_thigh', names)
+    # compute the cluster orientation, also cluster to world
+    rthigh_R_c_w = utility.create_cluster_frame(markers, 'right_thigh', names)
 
     # compute the constant segment to cluster rotation matrix
-    rthigh_R_s_c = rthigh_R_w_c @ rthigh_af.T
+    rthigh_R_s_c = rthigh_R_c_w.T @ rthigh_af
 
     # -----------------------------------------------
     #              LEFT THIGH
     # -----------------------------------------------
     # first transform the left hip joint center coordinates back into the world frame
-    left_hjc = (pelvis_R_w_c.T @ (left_c_pc
-                                  + left_thigh_data[names.left_thigh_c2]).reshape((-1, 3, 1))).reshape((-1, 3))
-    """
-    # compute the midpoint of the epicondyles
-    mid_ep = (left_thigh_data[names.left_lep] + left_thigh_data[names.left_mep]) / 2
+    left_hjc = pelvis_af @ left_jc_p.flatten() + pelvis_o
 
-    # create the axes
-    lthigh_y = left_hjc - mid_ep
-    lthigh_y /= norm(lthigh_y)
-
-    z_tmp = left_thigh_data[names.left_mep] - left_thigh_data[names.left_lep]
-
-    lthigh_x = cross(lthigh_y, z_tmp)
-    lthigh_x /= norm(lthigh_x)
-
-    lthigh_z = cross(lthigh_x, lthigh_y)
-    lthigh_z /= norm(lthigh_z)
-    """
-    # create the anatomical frame matrix, also the world to left thigh rotation matrix
-    # lthigh_af = stack((lthigh_x, lthigh_y, lthigh_z), axis=1)
+    # create the anatomical frame matrix, also the left thigh to world rotation matrix
     lthigh_af = segmentFrames.thigh(markers, 'left', use_cluster=False, hip_joint_center=left_hjc, marker_names=names)
 
-    # compute the cluster orientation
-    lthigh_R_w_c = utility.create_cluster_frame(left_thigh_data, 'left_thigh', names)
+    # compute the cluster orientation, also cluster to world rotation
+    lthigh_R_c_w = utility.create_cluster_frame(markers, 'left_thigh', names)
 
     # compute the constant segment to cluster rotation matrix
-    lthigh_R_s_c = lthigh_R_w_c @ lthigh_af.T
+    lthigh_R_s_c = lthigh_R_c_w.T @ lthigh_af
 
-    return (pelvis_af, pelvis_R_w_c, pelvis_R_s_c), (lthigh_af, lthigh_R_w_c, lthigh_R_s_c), (rthigh_af, rthigh_R_w_c,
+    return (pelvis_af, pelvis_R_c_w, pelvis_R_s_c), (lthigh_af, lthigh_R_c_w, lthigh_R_s_c), (rthigh_af, rthigh_R_c_w,
                                                                                               rthigh_R_s_c)
 
 

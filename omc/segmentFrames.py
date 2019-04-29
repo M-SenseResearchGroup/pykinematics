@@ -42,10 +42,10 @@ def pelvis(marker_data, use_cluster=False, R_s_c=None, marker_names='default'):
 
     if use_cluster:
         # first compute the cluster orientation
-        R_w_c = utility.create_cluster_frame(marker_data, 'pelvis', names)
+        R_c_w = utility.create_cluster_frame(marker_data, 'pelvis', names)
 
         # compute the anatomical frame matrix, which is the world to segment rotation matrix
-        pelvis_af = R_s_c.T @ R_w_c
+        pelvis_af = R_c_w @ R_s_c
 
     else:
         # compute the pelvis origin
@@ -106,10 +106,16 @@ def thigh(marker_data, side, use_cluster=True, R_s_c=None, hip_joint_center=None
 
     if use_cluster:
         # first compute the cluster orientation
-        R_w_c = utility.create_cluster_frame(marker_data, 'pelvis', names)
+        if side == 'right':
+            segment_name = 'right_thigh'
+        elif side == 'left':
+            segment_name = 'left_thigh'
+        else:
+            raise ValueError('side must be either "left" or "right".')
+        R_c_w = utility.create_cluster_frame(marker_data, segment_name, names)
 
-        # compute the anatomical frame matrix, which is the world to segment rotation matrix
-        thigh_af = R_s_c.T @ R_w_c
+        # compute the anatomical frame matrix, which is the segment to world rotation matrix
+        thigh_af = R_c_w @ R_s_c
 
     else:
         # compute the midpoint of the epicondyles
