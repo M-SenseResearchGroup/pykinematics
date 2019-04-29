@@ -38,8 +38,7 @@ def get_acc_scale(acc, gravity=9.81):
     return gravity / mean_acc
 
 
-def process_static_calibration(lt_p_q, rt_p_q, pelvis_axis, l_thigh_axis, r_thigh_axis, pelvis_w, l_thigh_w, r_thigh_w,
-                               fs, window=1.0):
+def static(lt_p_q, rt_p_q, pelvis_axis, l_thigh_axis, r_thigh_axis, pelvis_w, l_thigh_w, r_thigh_w, fs, window=1.0):
     """
     Process a static standing data to create the anatomical axes for the pelvis and thighs.
 
