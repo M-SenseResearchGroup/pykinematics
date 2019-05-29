@@ -5,6 +5,8 @@ Lukas Adamowicz
 May 2019
 GNU GPL v3.0
 """
+from warnings import warn
+
 from pymotion import imu
 
 
@@ -20,10 +22,23 @@ class ImuAngles:
         ImuAngles._check_required_sensors(static_data, 'static')
         ImuAngles._check_required_sensors(joint_center_data, 'joint center')
 
-        # scale the acceleration data
-        acc_scales = dict()
-        for sensor
-        imu.calibration.get_acc_scale()
+        # get the acceleration scales
+        self.acc_scales = dict()
+        for sensor in static_data.keys():
+            self.acc_scales[sensor] = imu.calibration.get_acc_scale(static_data[sensor]['acceleration'])
+
+        # scale the available data
+        for sensor in self.acc_scales.keys():
+            static_data[sensor]['Acceleration'] *= self.acc_scales[sensor]
+
+            if sensor in list(joint_center_data.keys()):
+                joint_center_data[sensor]['Acceleration'] *= self.acc_scales[sensor]
+        # issue a warning if any sensors are in the joint center data but not in the static data scales
+        for sens in [sens for sens in joint_center_data.keys() if sens not in list(self.acc_scales.keys())]:
+            warn(f'Sensor ({sens}) in joint center data has not been scaled due to no scale factor available from '
+                 f'static data provided. Performance may suffer as a result.')
+
+
 
     @staticmethod
     def _check_required_sensors(data, data_use):
