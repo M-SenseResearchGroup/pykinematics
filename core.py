@@ -11,11 +11,18 @@ from pymotion import imu
 
 
 class ImuAngles:
-    def __init__(self, gravity_value):
+    def __init__(self, gravity_value=9.81, filter_values=None):
         """
         Compute angles from MIMU sensors, from initial raw data through joint angles.
         """
-        self._grav_val = gravity_value
+        self.grav_val = gravity_value
+
+        # set the default filter values
+        self.set_default_filter_values()
+        if filter_values is not None:  # see if any changes to be included
+            if isinstance(filter_values, dict):  # check that the format is followed
+                for key in filter_values.keys():  # change the default values
+                    self.filt_vals[key] = filter_values[key]
 
     def calibrate(self, static_data, joint_center_data):
         # check to ensure that the data provided has the required sensors
@@ -25,7 +32,8 @@ class ImuAngles:
         # get the acceleration scales
         self.acc_scales = dict()
         for sensor in static_data.keys():
-            self.acc_scales[sensor] = imu.calibration.get_acc_scale(static_data[sensor]['acceleration'])
+            self.acc_scales[sensor] = imu.calibration.get_acc_scale(static_data[sensor]['acceleration'],
+                                                                    gravity=self.grav_val)
 
         # scale the available data
         for sensor in self.acc_scales.keys():
@@ -38,7 +46,17 @@ class ImuAngles:
             warn(f'Sensor ({sens}) in joint center data has not been scaled due to no scale factor available from '
                  f'static data provided. Performance may suffer as a result.')
 
+    def set_default_filter_values(self):
+        """
+        Set the filter values to the default:
 
+        angular velocity : (2, 15)
+        acceleration : (2, 15)
+        angular acceleration : (2, 15)
+        magnetic field : (2, 15)
+        """
+        self.filt_vals = {'angular velocity': (2, 15), 'acceleration': (2, 15), 'angular acceleration': (2, 15),
+                          'magnetic field': (2, 15)}
 
     @staticmethod
     def _check_required_sensors(data, data_use):
