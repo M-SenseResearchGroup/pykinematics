@@ -5,13 +5,15 @@ Lukas Adamowicz
 May 2019
 GNU GPL v3.0
 """
+from numpy import mean, diff
+from scipy.signal import butter, filtfilt
 from warnings import warn
 
 from pymotion import imu
 
 
 class ImuAngles:
-    def __init__(self, gravity_value=9.81, filter_values=None):
+    def __init__(self, gravity_value=9.81, filter_values=None, angular_velocity_derivative_order=2):
         """
         Compute angles from MIMU sensors, from initial raw data through joint angles.
         """
@@ -23,6 +25,11 @@ class ImuAngles:
             if isinstance(filter_values, dict):  # check that the format is followed
                 for key in filter_values.keys():  # change the default values
                     self.filt_vals[key] = filter_values[key]
+
+        if angular_velocity_derivative_order == 2 or angular_velocity_derivative_order == 4:
+            self.wd_ord = angular_velocity_derivative_order
+        else:
+            raise ValueError('The order of the angular velocity derivative must be either 2 or 4.')
 
     def calibrate(self, static_data, joint_center_data):
         # check to ensure that the data provided has the required sensors
@@ -46,17 +53,75 @@ class ImuAngles:
             warn(f'Sensor ({sens}) in joint center data has not been scaled due to no scale factor available from '
                  f'static data provided. Performance may suffer as a result.')
 
+        # filter the static data
+        self._apply_filter_dict(static_data, comp_angular_accel=False)
+        # filter the joint center data
+        self._apply_filter_dict(joint_center_data, comp_angular_accel=True)  # need angular accel for this one
+
+    def _apply_filter_dict(self, data, comp_angular_accel=False):
+        """
+        Apply a filter to a whole dictionary of sensor data, and calculate angular acceleration if necessary.
+
+        Parameters
+        ----------
+        data : dict
+            Dictionary of data to apply the filter to
+        comp_angular_accel : bool, optional
+            Compute and filter angular acceleration. Default is False
+        """
+        for sensor in data.keys():
+            # compute the sampling time difference, 1/f_sample
+            data[sensor]['dt'] = mean(diff(data[sensor]['Time']))
+            # apply the specified filter to the acceleration
+            ImuAngles._apply_filter(data[sensor]['Acceleration'], data[sensor]['dt'],
+                                    self.filt_vals['Acceleration'][0], self.filt_vals['Acceleration'][1])
+            # apply the specified filter to the angular velocity
+            ImuAngles._apply_filter(data[sensor]['Angular velocity'], data[sensor]['dt'],
+                                    self.filt_vals['Angular velocity'][0], self.filt_vals['Angular velocity'][1])
+            # apply the specified filter to the magnetic field reading
+            ImuAngles._apply_filter(data[sensor]['Magnetic field'], data[sensor]['dt'],
+                                    self.filt_vals['Magnetic field'][0], self.filt_vals['Magnetic field'][1])
+
+            if comp_angular_accel:
+                data[sensor]['Angular acceleration'] = imu.utility.calc_derivative(data[sensor]['Angular velocity'],
+                                                                                   data[sensor]['dt'], order=self.wd_ord)
+                ImuAngles._apply_filter(data[sensor]['Angular acceleration'], data[sensor]['dt'],
+                                        self.filt_vals['Angular acceleration'][0],
+                                        self.filt_vals['Angular acceleration'][0])
+
+    @staticmethod
+    def _apply_filter(x, dt, filt_order, filt_cutoff):
+        """
+        Apply a filter to the data
+
+        Parameters
+        ----------
+        x : numpy.ndarray
+            (N, M) array of data to be filtered. Will filter along the 0th axis (N)
+        dt : float
+            Sampling time difference between samples.
+        filt_order : int
+            Order of the filter to be applied
+        filt_cutoff : float
+            Cutoff frequency of the filter to be applied
+        """
+        b, a = butter(filt_order, filt_cutoff * 2 * dt)
+        if x.ndim == 2:
+            x = filtfilt(b, a, x, axis=0)
+        elif x.ndim == 1:
+            x = filtfilt(b, a, x)
+
     def set_default_filter_values(self):
         """
         Set the filter values to the default:
 
-        angular velocity : (2, 15)
-        acceleration : (2, 15)
-        angular acceleration : (2, 15)
-        magnetic field : (2, 15)
+        Angular velocity : (2, 15)
+        Acceleration : (2, 15)
+        Angular acceleration : (2, 15)
+        Magnetic field : (2, 15)
         """
-        self.filt_vals = {'angular velocity': (2, 15), 'acceleration': (2, 15), 'angular acceleration': (2, 15),
-                          'magnetic field': (2, 15)}
+        self.filt_vals = {'Angular velocity': (2, 15), 'Acceleration': (2, 15), 'Angular acceleration': (2, 15),
+                          'Magnetic field': (2, 15)}
 
     @staticmethod
     def _check_required_sensors(data, data_use):
