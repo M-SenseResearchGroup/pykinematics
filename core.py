@@ -71,28 +71,37 @@ class ImuAngles:
         # if the center method is "SAC", we need to compute the relative orientation first
         srof = imu.orientation.SROFilter(g=self.grav_val, **self.orient_kwargs)
         if joint_center.method == 'SAC':
-            q_lt_lb, R_lt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
-                                                              joint_center_data['Left thigh'])
-            q_rt_lb, R_rt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
-                                                              joint_center_data['Right thigh'])
-            q_ls_lt, R_ls_lt = ImuAngles._compute_orientation(srof, joint_center_data['Left thigh'],
-                                                              joint_center_data['Left shank'])
-            q_rs_rt, R_rs_rt = ImuAngles._compute_orientation(srof, joint_center_data['Right thigh'],
-                                                              joint_center_data['Right shank'])
+            _, jcR_lt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
+                                                          joint_center_data['Left thigh'])
+            _, jcR_rt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
+                                                          joint_center_data['Right thigh'])
+            _, jcR_ls_lt = ImuAngles._compute_orientation(srof, joint_center_data['Left thigh'],
+                                                          joint_center_data['Left shank'])
+            _, jcR_rs_rt = ImuAngles._compute_orientation(srof, joint_center_data['Right thigh'],
+                                                          joint_center_data['Right shank'])
         else:
-            R_lt_lb, R_rt_lb, R_ls_lt, R_rs_rt = None, None, None, None
+            jcR_lt_lb, jcR_rt_lb, jcR_ls_lt, jcR_rs_rt = None, None, None, None
 
         # compute the joint centers
-        l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
-                                                          joint_center_data['Left thigh'], R_lt_lb)
-        l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
-                                                          joint_center_data['Right thigh'], R_rt_lb)
-        l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Left thigh'],
-                                                          joint_center_data['Left shank'], R_ls_lt,
+        hip_l_lb, hip_l_t, _ = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
+                                                         joint_center_data['Left thigh'], jcR_lt_lb)
+        hip_r_lb, hip_r_t, _ = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
+                                                         joint_center_data['Right thigh'], jcR_rt_lb)
+        knee_l_t, knee_l_s, _ = ImuAngles._compute_center(joint_center, joint_center_data['Left thigh'],
+                                                          joint_center_data['Left shank'], jcR_ls_lt,
                                                           self.correct_knee, self.knee_axis_kwargs)
-        l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Right thigh'],
-                                                          joint_center_data['Right shank'], R_rs_rt,
+        knee_r_t, knee_r_s, _ = ImuAngles._compute_center(joint_center, joint_center_data['Right thigh'],
+                                                          joint_center_data['Right shank'], jcR_rs_rt,
                                                           self.correct_knee, self.knee_axis_kwargs)
+
+        # compute the fixed axes for the thighs and pelvis
+        self.pelvis_axis = imu.joints.fixed_axis(hip_l_lb, hip_r_lb, center_to_sensor=True)
+        self.l_thigh_axis = imu.joints.fixed_axis(knee_l_t, hip_l_t, center_to_sensor=True)
+        self.r_thigh_axis = imu.joints.fixed_axis(knee_r_t, hip_r_t, center_to_sensor=True)
+
+        # compute the relative orientation between sensors during the static data
+        _, R_lt_lb = ImuAngles._compute_orientation(srof, static_data['Lumbar'], static_data['Left thigh'])
+        _, R_rt_lb = ImuAngles._compute_orientation(srof, static_data['Lumbar'], static_data['Right thigh'])
 
     @staticmethod
     def _compute_center(jc, prox, dist, R_dist_prox, correct_knee=False, knee_axis_kwargs=None):
