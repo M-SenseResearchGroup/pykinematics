@@ -13,7 +13,8 @@ from pymotion import imu
 
 
 class ImuAngles:
-    def __init__(self, gravity_value=9.81, filter_values=None, angular_velocity_derivative_order=2):
+    def __init__(self, gravity_value=9.81, filter_values=None, angular_velocity_derivative_order=2,
+                 joint_center_kwargs=None, orientation_kwargs=None):
         """
         Compute angles from MIMU sensors, from initial raw data through joint angles.
         """
@@ -31,6 +32,9 @@ class ImuAngles:
         else:
             raise ValueError('The order of the angular velocity derivative must be either 2 or 4.')
 
+        self.center_kwargs = joint_center_kwargs
+        self.orient_kwargs = orientation_kwargs
+
     def calibrate(self, static_data, joint_center_data):
         # check to ensure that the data provided has the required sensors
         ImuAngles._check_required_sensors(static_data, 'static')
@@ -39,7 +43,7 @@ class ImuAngles:
         # get the acceleration scales
         self.acc_scales = dict()
         for sensor in static_data.keys():
-            self.acc_scales[sensor] = imu.calibration.get_acc_scale(static_data[sensor]['acceleration'],
+            self.acc_scales[sensor] = imu.calibration.get_acc_scale(static_data[sensor]['Acceleration'],
                                                                     gravity=self.grav_val)
 
         # scale the available data
@@ -57,6 +61,44 @@ class ImuAngles:
         self._apply_filter_dict(static_data, comp_angular_accel=False)
         # filter the joint center data
         self._apply_filter_dict(joint_center_data, comp_angular_accel=True)  # need angular accel for this one
+
+        # compute joint centers from the joint center data
+        joint_center = imu.joints.Center(g=self.grav_val, **self.center_kwargs)
+
+        # if the center method is "SAC", we need to compute the relative orientation first
+        srof = imu.orientation.SROFilter(g=self.grav_val, **self.orient_kwargs)
+        if joint_center.method == 'SAC':
+            q_lt_p, self.R_lt_lb = ImuAngles._run_orientation(srof, joint_center_data['Lumbar'],
+                                                              joint_center_data['Left Thigh'])
+
+    @staticmethod
+    def _run_orientation(sro, sensor1, sensor2):
+        """
+        Run the orientaiton estimation filter. Rotation is provided from sensor 2 -> sensor 1
+
+        Parameters
+        ----------
+        sro : pymotion.imu.orientation.SROFilter
+            Sensor relative orientation estimation object
+        sensor1 : dict
+            Dictionary, containing 'Acceleration', 'Angular velocity', and 'Magnetic field' readings from a sensor.
+        sensor2 : dict
+            Dictionary, containing 'Acceleration', 'Angular velocity', and 'Magnetic field' readings from a sensor,
+            which will be used to find the rotation from sensor2's frame to sensor1's frame
+
+        Returns
+        -------
+        q_21 : numpy.ndarray
+            (N, 4) array quaternions representing the rotation to align sensor2's reference frame with that of sensor1's
+        R_21 : numpy.ndarray
+            (N, 3, 3) array of rotation matrices corresponding to the quaternions of 'q'
+        """
+        q = sro.run(sensor1['Acceleration'], sensor2['Acceleration'], sensor1['Angular velocity'],
+                    sensor2['Angular velocity'], sensor1['Magnetic field'], sensor2['Magnetic field'])
+
+        R = imu.utility.quat2matrix(q)  # convert to a rotation matrix
+
+        return q, R
 
     def _apply_filter_dict(self, data, comp_angular_accel=False):
         """
@@ -142,20 +184,20 @@ class ImuAngles:
         """
         if data_use == 'static':
             # required sensors : lumbar, left and right thigh
-            req = ['lumbar', 'left thigh', 'right thigh']
-            if not all([i in [j.lower() for j in data.keys()] for i in req]):
-                raise ValueError(f'Static data does not have the required sensors. Ensure it has "lumbar", '
-                                 f'"left thigh", and "right thigh" data.')
+            req = ['Lumbar', 'Left thigh', 'Right thigh']
+            if not all([i in [j for j in data.keys()] for i in req]):
+                raise ValueError(f'Static data does not have the required sensors. Ensure it has "Lumbar", '
+                                 f'"Left thigh", and "Right thigh" data.')
         elif data_use == 'joint center':
             # required sensors : lumbar, left and right thigh, left and right shank
-            req = ['lumbar', 'left thigh', 'right thigh', 'left shank', 'right shank']
-            if not all([i in [j.lower() for j in data.keys()] for i in req]):
+            req = ['Lumbar', 'Left thigh', 'Right thigh', 'Left shank', 'Right shank']
+            if not all([i in [j for j in data.keys()] for i in req]):
                 raise ValueError(f'Joint center computation data does not have the required sensors. Ensure it has '
-                                 f'"lumbar", "left thigh", "right thigh", "left shank", and "right shank" data.')
+                                 f'"Lumbar", "Left thigh", "Right thigh", "Left shank", and "Right shank" data.')
         elif data_use == 'trial':
             # required sensors : lumbar, left and right thigh
-            req = ['lumbar', 'left thigh', 'right thigh']
-            if not all([i in [j.lower() for j in data.keys()] for i in req]):
-                raise ValueError(f'Trial data does not have the required sensors. Ensure it has "lumbar", '
-                                 f'"left thigh", and "right thigh" data.')
+            req = ['Lumbar', 'Left thigh', 'Right thigh']
+            if not all([i in [j for j in data.keys()] for i in req]):
+                raise ValueError(f'Trial data does not have the required sensors. Ensure it has "Lumbar", '
+                                 f'"Left thigh", and "Right thigh" data.')
 
