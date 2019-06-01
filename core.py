@@ -68,13 +68,59 @@ class ImuAngles:
         # if the center method is "SAC", we need to compute the relative orientation first
         srof = imu.orientation.SROFilter(g=self.grav_val, **self.orient_kwargs)
         if joint_center.method == 'SAC':
-            q_lt_p, self.R_lt_lb = ImuAngles._run_orientation(srof, joint_center_data['Lumbar'],
-                                                              joint_center_data['Left Thigh'])
+            q_lt_lb, R_lt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
+                                                              joint_center_data['Left thigh'])
+            q_rt_lb, R_rt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
+                                                              joint_center_data['Right thigh'])
+            q_ls_lt, R_ls_lt = ImuAngles._compute_orientation(srof, joint_center_data['Left thigh'],
+                                                              joint_center_data['Left shank'])
+            q_rs_rt, R_rs_rt = ImuAngles._compute_orientation(srof, joint_center_data['Right thigh'],
+                                                              joint_center_data['Right shank'])
+        else:
+            R_lt_lb, R_rt_lb, R_ls_lt, R_rs_rt = None, None, None, None
+
+        # compute the joint centers
+        l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
+                                                          joint_center_data['Left thigh'], R_lt_lb)
+        l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
+                                                          joint_center_data['Right thigh'], R_rt_lb)
+        l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Left thigh'],
+                                                          joint_center_data['Left shank'], R_ls_lt)
+        l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Right thigh'],
+                                                          joint_center_data['Right shank'], R_rs_rt)
 
     @staticmethod
-    def _run_orientation(sro, sensor1, sensor2):
+    def _compute_center(jc, prox, dist, R_dist_prox):
         """
-        Run the orientaiton estimation filter. Rotation is provided from sensor 2 -> sensor 1
+        Compute the joint center
+
+        Parameters
+        ----------
+        jc : pymotion.imu.joints.Center
+            Initialized joint center computation object
+        prox : dict
+            Dictionary, containing 'Acceleration', 'Angular velocity', and 'Angular acceleration' readings from a
+            sensor.
+        dist : dict
+            Dictionary, containing 'Acceleration', 'Angular velocity', and 'Angular acceleration' readings from a
+            sensor.
+        R_dist_prox : numpy.ndarray
+            (N, 3, 3) array of rotation matrices that align the distal sensor's frame with the proximal sensor's frame.
+
+        Returns
+        -------
+
+        """
+        # run the computation
+        prox_jc, dist_jc, res = jc.compute(prox['Acceleration'], dist['Acceleration'],
+                                           prox['Angular velocity'], dist['Angular velocity'],
+                                           prox['Angular accleration'], dist['Angular acceleration'], R_dist_prox)
+        return prox_jc, dist_jc, res
+
+    @staticmethod
+    def _compute_orientation(sro, sensor1, sensor2):
+        """
+        Run the orientation estimation filter. Rotation is provided from sensor 2 -> sensor 1
 
         Parameters
         ----------
