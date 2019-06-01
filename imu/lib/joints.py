@@ -358,7 +358,7 @@ def fixed_axis(center1, center2, center_to_sensor=True):
     Returns
     -------
     axis : numpy.ndarray
-        Fixed axis based on joint centers.
+        Fixed axis based on joint centers, from center1 to center2.
     """
 
     if center_to_sensor:
