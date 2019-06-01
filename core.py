@@ -37,6 +37,15 @@ class ImuAngles:
 
         self.correct_knee = correct_knee
 
+        # calibrate attributes
+        self.acc_scales = None
+        self.pelvis_axis, self.l_thigh_axis, self.r_thigh_axis = None, None, None
+        self.pelvis_AF, self.l_thigh_AF, self.r_thigh_AF = None, None, None
+
+    def estimate(self, trial_data):
+        # check to ensure that the data provided has the required sensors
+        pass
+
     def calibrate(self, static_data, joint_center_data):
         # check to ensure that the data provided has the required sensors
         ImuAngles._check_required_sensors(static_data, 'static')
