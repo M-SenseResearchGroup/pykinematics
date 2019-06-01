@@ -14,7 +14,7 @@ from pymotion import imu
 
 class ImuAngles:
     def __init__(self, gravity_value=9.81, filter_values=None, angular_velocity_derivative_order=2,
-                 joint_center_kwargs=None, orientation_kwargs=None):
+                 joint_center_kwargs=None, orientation_kwargs=None, correct_knee=True, knee_axis_kwargs=None):
         """
         Compute angles from MIMU sensors, from initial raw data through joint angles.
         """
@@ -34,6 +34,9 @@ class ImuAngles:
 
         self.center_kwargs = joint_center_kwargs
         self.orient_kwargs = orientation_kwargs
+        self.knee_axis_kwargs = knee_axis_kwargs
+
+        self.correct_knee = correct_knee
 
     def calibrate(self, static_data, joint_center_data):
         # check to ensure that the data provided has the required sensors
@@ -85,12 +88,14 @@ class ImuAngles:
         l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
                                                           joint_center_data['Right thigh'], R_rt_lb)
         l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Left thigh'],
-                                                          joint_center_data['Left shank'], R_ls_lt)
+                                                          joint_center_data['Left shank'], R_ls_lt,
+                                                          self.correct_knee, self.knee_axis_kwargs)
         l_hip_lb, l_hip_lt, _ = ImuAngles._compute_center(joint_center, joint_center_data['Right thigh'],
-                                                          joint_center_data['Right shank'], R_rs_rt)
+                                                          joint_center_data['Right shank'], R_rs_rt,
+                                                          self.correct_knee, self.knee_axis_kwargs)
 
     @staticmethod
-    def _compute_center(jc, prox, dist, R_dist_prox):
+    def _compute_center(jc, prox, dist, R_dist_prox, correct_knee=False, knee_axis_kwargs=None):
         """
         Compute the joint center
 
@@ -106,15 +111,29 @@ class ImuAngles:
             sensor.
         R_dist_prox : numpy.ndarray
             (N, 3, 3) array of rotation matrices that align the distal sensor's frame with the proximal sensor's frame.
+        correct_knee : bool, optional
+            Whether or not to correct the knee joint. Should only be used for knee joint center computation. Default is
+            False.
+        knee_axis_kwargs : {None, dict}, optional
+            Additional keyword arguments to be passed to the knee axis estimation, which is used for knee joint
+            center correction. Default is None.
 
         Returns
         -------
-
+        prox_joint_center : numpy.ndarray
+            Vector from the joint center to the proximal sensor.
+        dist_joint_center : numpy.ndarray
+            Vector from the joint center to the distal sensor.
+        residual : float
+            Residual value from the optimization process.
         """
         # run the computation
         prox_jc, dist_jc, res = jc.compute(prox['Acceleration'], dist['Acceleration'],
                                            prox['Angular velocity'], dist['Angular velocity'],
                                            prox['Angular accleration'], dist['Angular acceleration'], R_dist_prox)
+        if correct_knee:
+            imu.joints.correct_knee(prox['Angular velocity'], dist['Angular velocity'], prox_jc, dist_jc, R_dist_prox,
+                                    **knee_axis_kwargs)
         return prox_jc, dist_jc, res
 
     @staticmethod
