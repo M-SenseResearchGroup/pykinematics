@@ -28,10 +28,8 @@ class ImuAngles:
                 for key in filter_values.keys():  # change the default values
                     self.filt_vals[key] = filter_values[key]
 
-        if angular_velocity_derivative_order == 2 or angular_velocity_derivative_order == 4:
-            self.wd_ord = angular_velocity_derivative_order
-        else:
-            raise ValueError('The order of the angular velocity derivative must be either 2 or 4.')
+        self.wd_ord = angular_velocity_derivative_order
+        assert self.wd_ord == 2 or self.wd_ord == 4, 'The angular velocity derivative order must be either 2 or 4.'
 
         self.center_kwargs = joint_center_kwargs
         self.orient_kwargs = orientation_kwargs
