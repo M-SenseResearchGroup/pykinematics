@@ -532,7 +532,7 @@ class SROFilter:
 
     def run(self, s1_a, s2_a, s1_w, s2_w, s1_h, s2_h, dt):
         """
-        Run the filter on the data from the joint.
+        Run the filter on the data from the joint. Rotate from sensor 2 to sensor 1
 
         Parameters
         ----------
