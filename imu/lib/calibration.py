@@ -13,7 +13,7 @@ from pymotion.imu import utility
 from pymotion import common
 
 
-__all__ = ['get_acc_scale', 'process_static_calibration']
+__all__ = ['get_acc_scale', 'static']
 
 
 def get_acc_scale(acc, gravity=9.81):

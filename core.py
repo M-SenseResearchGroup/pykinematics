@@ -13,11 +13,12 @@ from pymotion import imu
 
 
 class ImuAngles:
-    def __init__(self, gravity_value=9.81, filter_values=None, angular_velocity_derivative_order=2,
+    def __init__(self, static_window=1.0, gravity_value=9.81, filter_values=None, angular_velocity_derivative_order=2,
                  joint_center_kwargs=None, orientation_kwargs=None, correct_knee=True, knee_axis_kwargs=None):
         """
         Compute angles from MIMU sensors, from initial raw data through joint angles.
         """
+        self.static_window = static_window
         self.grav_val = gravity_value
 
         # set the default filter values
@@ -100,8 +101,16 @@ class ImuAngles:
         self.r_thigh_axis = imu.joints.fixed_axis(knee_r_t, hip_r_t, center_to_sensor=True)
 
         # compute the relative orientation between sensors during the static data
-        _, R_lt_lb = ImuAngles._compute_orientation(srof, static_data['Lumbar'], static_data['Left thigh'])
-        _, R_rt_lb = ImuAngles._compute_orientation(srof, static_data['Lumbar'], static_data['Right thigh'])
+        q_lt_lb, _ = ImuAngles._compute_orientation(srof, static_data['Lumbar'], static_data['Left thigh'])
+        q_rt_lb, _ = ImuAngles._compute_orientation(srof, static_data['Lumbar'], static_data['Right thigh'])
+
+        # process the static calibration
+        AF = imu.calibration.static(q_lt_lb, q_rt_lb, self.pelvis_axis, self.l_thigh_axis, self.r_thigh_axis,
+                                    static_data['Lumbar']['Angular velocity'],
+                                    static_data['Left thigh']['Angular velocity'],
+                                    static_data['Right thigh']['Angular velocity'], static_data['Lumbar']['dt'],
+                                    self.static_window)
+        self.pelvis_AF, self.l_thigh_AF, self.r_thigh_AF = AF
 
     @staticmethod
     def _compute_center(jc, prox, dist, R_dist_prox, correct_knee=False, knee_axis_kwargs=None):
