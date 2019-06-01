@@ -23,7 +23,7 @@ class Center:
         ----------
         g : float, optional
             Local value of gravitational acceleration. Default is 9.81 m/s^2.
-        method : {'SAC', 'SSFC', 'SSFCv'}, optional
+        method : {'SAC', 'SSFC'}, optional
             Method to use for the computation of the joint center. Default is SAC. See Crabolu et al. for more details.
             SSFCv is SSFC but using vectors instead of magnitude, which requires rotations between sensors.
         mask_input : bool, optional
@@ -67,7 +67,8 @@ class Center:
         dist_wd : numpy.ndarray
             Nx3 array of angular accelerations measured by the joint distal sensor.
         R_dist_prox : numpy.ndarray
-            Nx3x3 array of rotations from the distal sensor frame to the proximal sensor frame.
+            Nx3x3 array of rotations from the distal sensor frame to the proximal sensor frame. Ignored if method is
+            'SSFC'.
 
         Returns
         -------
