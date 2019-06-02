@@ -14,7 +14,8 @@ from pymotion import imu
 
 class ImuAngles:
     def __init__(self, static_window=1.0, gravity_value=9.81, filter_values=None, angular_velocity_derivative_order=2,
-                 joint_center_kwargs=None, orientation_kwargs=None, correct_knee=True, knee_axis_kwargs=None):
+                 joint_center_kwargs=None, orientation_kwargs=None, correct_knee=True, knee_axis_kwargs=None,
+                 verbose=True):
         """
         Compute angles from MIMU sensors, from initial raw data through joint angles.
         """
@@ -42,14 +43,45 @@ class ImuAngles:
         self.pelvis_axis, self.l_thigh_axis, self.r_thigh_axis = None, None, None
         self.pelvis_AF, self.l_thigh_AF, self.r_thigh_AF = None, None, None
 
+        self.verbose = verbose
+
     def estimate(self, trial_data):
         # check to ensure that the data provided has the required sensors
-        pass
+        ImuAngles._check_required_sensors(trial_data, 'trial')
+
+        if self.verbose:
+            print('-------------------------------------------------\nPreprocessing trial data...')
+
+        # scale the acceleration data
+        for sensor in self.acc_scales.keys():
+            trial_data[sensor]['Acceleration'] *= self.acc_scales[sensor]
+
+        # filter the data
+        self._apply_filter_dict(trial_data, comp_angular_accel=False)  # don't need angular acceleration
+
+        # compute the relative orientation
+        if self.verbose:
+            print('Computing sensor relative orientation...')
+        srof = imu.orientation.SROFilter(g=self.grav_val, **self.orient_kwargs)
+        _, R_lt_lb = ImuAngles._compute_orientation(srof, trial_data['Lumbar'], trial_data['Left thigh'])
+        _, R_rt_lb = ImuAngles._compute_orientation(srof, trial_data['Lumbar'], trial_data['Right thigh'])
+
+        # compute joint angles
+        if self.verbose:
+            print('Computing left and right hip joint angles...')
+        l_hip_ang = imu.angles.hip_from_frames(self.pelvis_AF, self.l_thigh_AF, R_lt_lb, side='left')
+        r_hip_ang = imu.angles.hip_from_frames(self.pelvis_AF, self.r_thigh_AF, R_rt_lb, side='right')
+
+        return l_hip_ang, r_hip_ang
 
     def calibrate(self, static_data, joint_center_data):
         # check to ensure that the data provided has the required sensors
         ImuAngles._check_required_sensors(static_data, 'static')
         ImuAngles._check_required_sensors(joint_center_data, 'joint center')
+
+        if self.verbose:
+            print('\n-----------------------------------------------------\n'
+                  'Scaling acceleration and pre-processing the raw data')
 
         # get the acceleration scales
         self.acc_scales = dict()
@@ -73,6 +105,8 @@ class ImuAngles:
         # filter the joint center data
         self._apply_filter_dict(joint_center_data, comp_angular_accel=True)  # need angular accel for this one
 
+        if self.verbose:
+            print('Computing joint centers...')
         # compute joint centers from the joint center data
         joint_center = imu.joints.Center(g=self.grav_val, **self.center_kwargs)
 
@@ -91,16 +125,37 @@ class ImuAngles:
             jcR_lt_lb, jcR_rt_lb, jcR_ls_lt, jcR_rs_rt = None, None, None, None
 
         # compute the joint centers
-        hip_l_lb, hip_l_t, _ = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
-                                                         joint_center_data['Left thigh'], jcR_lt_lb)
-        hip_r_lb, hip_r_t, _ = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
-                                                         joint_center_data['Right thigh'], jcR_rt_lb)
-        knee_l_t, knee_l_s, _ = ImuAngles._compute_center(joint_center, joint_center_data['Left thigh'],
-                                                          joint_center_data['Left shank'], jcR_ls_lt,
-                                                          self.correct_knee, self.knee_axis_kwargs)
-        knee_r_t, knee_r_s, _ = ImuAngles._compute_center(joint_center, joint_center_data['Right thigh'],
-                                                          joint_center_data['Right shank'], jcR_rs_rt,
-                                                          self.correct_knee, self.knee_axis_kwargs)
+        hip_l_lb, hip_l_t, hip_l_res = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
+                                                                 joint_center_data['Left thigh'], jcR_lt_lb)
+        hip_r_lb, hip_r_t, hip_r_res = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
+                                                                 joint_center_data['Right thigh'], jcR_rt_lb)
+        knee_l_t, knee_l_s, knee_l_res = ImuAngles._compute_center(joint_center, joint_center_data['Left thigh'],
+                                                                   joint_center_data['Left shank'], jcR_ls_lt,
+                                                                   self.correct_knee, self.knee_axis_kwargs)
+        knee_r_t, knee_r_s, knee_r_res = ImuAngles._compute_center(joint_center, joint_center_data['Right thigh'],
+                                                                   joint_center_data['Right shank'], jcR_rs_rt,
+                                                                   self.correct_knee, self.knee_axis_kwargs)
+
+        if self.verbose:
+            print('------------------------------------------------------------')
+            print(
+                f'Left hip:  Residual: {hip_l_res:0.3f}\nLumbar: ({hip_l_lb[0]*100:0.2f}, {hip_l_lb[1]*100:0.2f}, '
+                f'{hip_l_lb[2]*100:0.2f})cm    Left thigh: ({hip_l_t[0]*100:0.2f}, {hip_l_t[1]*100:0.2f}, '
+                f'{hip_l_t[2]*100:0.2f})cm')
+            print(
+                f'Right hip:  Residual: {hip_r_res:0.3f}\nLumbar: ({hip_r_lb[0] * 100:0.2f}, {hip_r_lb[1] * 100:0.2f}, '
+                f'{hip_r_lb[2] * 100:0.2f})cm    Right thigh: ({hip_r_t[0] * 100:0.2f}, {hip_r_t[1] * 100:0.2f}, '
+                f'{hip_r_t[2] * 100:0.2f})cm')
+            print(
+                f'Left knee:  Residual: {knee_l_res:0.3f}\nLeft thigh: ({knee_l_t[0] * 100:0.2f}, '
+                f'{knee_l_t[1] * 100:0.2f}, {knee_l_t[2] * 100:0.2f})cm    Left shank: ({knee_l_s[0] * 100:0.2f}, '
+                f'{knee_l_s[1] * 100:0.2f}, {knee_l_s[2] * 100:0.2f})cm')
+            print(
+                f'Right knee:  Residual: {knee_r_res:0.3f}\nRight thigh: ({knee_r_t[0] * 100:0.2f}, '
+                f'{knee_r_t[1] * 100:0.2f}, {knee_r_t[2] * 100:0.2f})cm    Right shank: ({knee_r_s[0] * 100:0.2f}, '
+                f'{knee_r_s[1] * 100:0.2f}, {knee_r_s[2] * 100:0.2f})cm')
+            print('------------------------------------------------------------')
+            print('Computing fixed axes and creating anatomical reference frames')
 
         # compute the fixed axes for the thighs and pelvis
         self.pelvis_axis = imu.joints.fixed_axis(hip_l_lb, hip_r_lb, center_to_sensor=True)
@@ -118,6 +173,9 @@ class ImuAngles:
                                     static_data['Right thigh']['Angular velocity'], static_data['Lumbar']['dt'],
                                     self.static_window)
         self.pelvis_AF, self.l_thigh_AF, self.r_thigh_AF = AF
+
+        if self.verbose:
+            print('Calibration complete\n')
 
     @staticmethod
     def _compute_center(jc, prox, dist, R_dist_prox, correct_knee=False, knee_axis_kwargs=None):
@@ -155,10 +213,10 @@ class ImuAngles:
         # run the computation
         prox_jc, dist_jc, res = jc.compute(prox['Acceleration'], dist['Acceleration'],
                                            prox['Angular velocity'], dist['Angular velocity'],
-                                           prox['Angular accleration'], dist['Angular acceleration'], R_dist_prox)
+                                           prox['Angular acceleration'], dist['Angular acceleration'], R_dist_prox)
         if correct_knee:
-            imu.joints.correct_knee(prox['Angular velocity'], dist['Angular velocity'], prox_jc, dist_jc, R_dist_prox,
-                                    **knee_axis_kwargs)
+            imu.joints.correct_knee(prox['Angular velocity'], dist['Angular velocity'], prox_jc, dist_jc,
+                                    R_dist_prox[0], knee_axis_kwargs)
         return prox_jc, dist_jc, res
 
     @staticmethod
@@ -184,7 +242,7 @@ class ImuAngles:
             (N, 3, 3) array of rotation matrices corresponding to the quaternions of 'q'
         """
         q = sro.run(sensor1['Acceleration'], sensor2['Acceleration'], sensor1['Angular velocity'],
-                    sensor2['Angular velocity'], sensor1['Magnetic field'], sensor2['Magnetic field'])
+                    sensor2['Angular velocity'], sensor1['Magnetic field'], sensor2['Magnetic field'], sensor1['dt'])
 
         R = imu.utility.quat2matrix(q)  # convert to a rotation matrix
 
@@ -205,21 +263,26 @@ class ImuAngles:
             # compute the sampling time difference, 1/f_sample
             data[sensor]['dt'] = mean(diff(data[sensor]['Time']))
             # apply the specified filter to the acceleration
-            ImuAngles._apply_filter(data[sensor]['Acceleration'], data[sensor]['dt'],
-                                    self.filt_vals['Acceleration'][0], self.filt_vals['Acceleration'][1])
+            data[sensor]['Acceleration'] = ImuAngles._apply_filter(data[sensor]['Acceleration'], data[sensor]['dt'],
+                                                                   self.filt_vals['Acceleration'][0],
+                                                                   self.filt_vals['Acceleration'][1])
             # apply the specified filter to the angular velocity
-            ImuAngles._apply_filter(data[sensor]['Angular velocity'], data[sensor]['dt'],
-                                    self.filt_vals['Angular velocity'][0], self.filt_vals['Angular velocity'][1])
+            data[sensor]['Angular velocity'] = ImuAngles._apply_filter(data[sensor]['Angular velocity'],
+                                                                       data[sensor]['dt'],
+                                                                       self.filt_vals['Angular velocity'][0],
+                                                                       self.filt_vals['Angular velocity'][1])
             # apply the specified filter to the magnetic field reading
-            ImuAngles._apply_filter(data[sensor]['Magnetic field'], data[sensor]['dt'],
-                                    self.filt_vals['Magnetic field'][0], self.filt_vals['Magnetic field'][1])
+            data[sensor]['Magnetic field'] = ImuAngles._apply_filter(data[sensor]['Magnetic field'], data[sensor]['dt'],
+                                                                     self.filt_vals['Magnetic field'][0],
+                                                                     self.filt_vals['Magnetic field'][1])
 
             if comp_angular_accel:
                 data[sensor]['Angular acceleration'] = imu.utility.calc_derivative(data[sensor]['Angular velocity'],
                                                                                    data[sensor]['dt'], order=self.wd_ord)
-                ImuAngles._apply_filter(data[sensor]['Angular acceleration'], data[sensor]['dt'],
-                                        self.filt_vals['Angular acceleration'][0],
-                                        self.filt_vals['Angular acceleration'][0])
+                data[sensor]['Angular acceleration'] = ImuAngles._apply_filter(data[sensor]['Angular acceleration'],
+                                                                               data[sensor]['dt'],
+                                                                               self.filt_vals['Angular acceleration'][0],
+                                                                               self.filt_vals['Angular acceleration'][1])
 
     @staticmethod
     def _apply_filter(x, dt, filt_order, filt_cutoff):
@@ -243,6 +306,8 @@ class ImuAngles:
         elif x.ndim == 1:
             x = filtfilt(b, a, x)
 
+        return x
+
     def set_default_filter_values(self):
         """
         Set the filter values to the default:
@@ -256,7 +321,7 @@ class ImuAngles:
                           'Magnetic field': (2, 15)}
 
     @staticmethod
-    def _check_required_sensors(data, data_use):
+    def _check_required_sensors(data, data_use, bilateral=True):
         """
         Check for the required sensors
 

@@ -203,7 +203,7 @@ class Center:
 
 
 class KneeAxis:
-    def __init__(self, mask_input=True, min_samples=1500, opt_kwargs={}):
+    def __init__(self, mask_input=True, min_samples=1500, opt_kwargs=None):
         """
 
         Parameters
@@ -304,15 +304,15 @@ def correct_knee(thigh_w, shank_w, thigh_r, shank_r, R_shank_thigh, knee_axis_kw
     Parameters
     ----------
     thigh_w : numpy.ndarray
-        Nx3 array of angular velocities measured by the thigh sensor.
+        (N, 3) array of angular velocities measured by the thigh sensor.
     shank_w : numpy.ndarray
-        Nx3 array of angular velocities measured by the shank sensor.
+        (N, 3) array of angular velocities measured by the shank sensor.
     thigh_r : numpy.ndarray
         Initial knee joint center to thigh sensor vector.
     shank_r : numpy.ndarray
         Initial knee joint center to shank sensor vector.
     R_shank_thigh : numpy.ndarray
-        Rotation matrix from shank to thigh sensors.
+        (3, 3) Rotation matrix from shank to thigh sensors.
     knee_axis_kwargs : dict, optional
         Knee axis computation key-word arguments. See KneeAxis.
 
