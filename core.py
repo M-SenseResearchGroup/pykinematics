@@ -10,6 +10,7 @@ from scipy.signal import butter, filtfilt
 from warnings import warn
 
 from pymotion import imu
+from pymotion import omc
 
 
 class ImuAngles:
@@ -441,5 +442,12 @@ class ImuAngles:
 
 
 class OmcAngles:
-    pass
+    def __init__(self, marker_names='default', window=1):
+        self.marker_names = marker_names
+        self.window = window
 
+    def estimate(self):
+        pass
+
+    def calibrate(self, static_data, joint_center_data):
+        omc.calibration.process_static(static_data, joint_center_data, self.window, self.marker_names
