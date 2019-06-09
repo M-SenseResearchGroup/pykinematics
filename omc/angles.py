@@ -21,6 +21,8 @@ def hip(pelvis_frames, thigh_frames, side):
     thigh_frames: numpy.ndarray
         Nx3x3 array of anatomical frames of the thigh for N time points in the world frame. Each 3x3 matrix is comprised
         of columns of thigh x-axis, y-axis, and z-axis, in that order.
+    side : {'left', 'right'}
+        Side the angles are being computed for. Used for sign determination of angles.
 
     Returns
     -------
