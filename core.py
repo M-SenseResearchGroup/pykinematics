@@ -446,8 +446,21 @@ class OmcAngles:
         self.marker_names = marker_names
         self.window = window
 
-    def estimate(self):
-        pass
+    def estimate(self, trial_data, pelvis_cluster=False):
+        # create the segment frames
+        pelvis_af = omc.segmentFrames.pelvis(trial_data[0], use_cluster=pelvis_cluster, marker_names=self.marker_names)
+        lthigh_af = omc.segmentFrames.thigh(trial_data[1], 'left', use_cluster=True, R_s_c=self.left_thigh[2],
+                                            marker_names=self.marker_names)
+        rthigh_af = omc.segmentFrames.thigh(trial_data[2], 'right', use_cluster=True, R_s_c=self.right_thigh[2],
+                                            marker_names=self.marker_names)
+
+        # compute the joint angles
+        l_hip_angles = omc.angles.hip(pelvis_af, lthigh_af, 'left')
+        r_hip_angles = omc.angles.hip(pelvis_af, rthigh_af, 'right')
+
+        return l_hip_angles, r_hip_angles
 
     def calibrate(self, static_data, joint_center_data):
-        omc.calibration.process_static(static_data, joint_center_data, self.window, self.marker_names
+        # process the calibration data
+        self.pelvis, self.left_thigh, self.right_thigh = omc.calibration.process_static(static_data, joint_center_data,
+                                                                                        self.window, self.marker_names)
