@@ -119,7 +119,10 @@ def thigh(marker_data, side, use_cluster=True, R_s_c=None, hip_joint_center=None
 
     else:
         # compute the midpoint of the epicondyles
-        mid_ep = (marker_data[names.right_lep] + marker_data[names.right_mep]) / 2
+        if side =='right':
+            mid_ep = (marker_data[names.right_lep] + marker_data[names.right_mep]) / 2
+        elif side == 'left':
+            mid_ep = (marker_data[names.left_lep] + marker_data[names.left_mep]) / 2
 
         # create the axes
         y = hip_joint_center - mid_ep

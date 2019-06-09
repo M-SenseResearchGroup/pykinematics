@@ -63,7 +63,7 @@ def compute_hip_center(pelvis_data, thigh_data, R, origin, marker_names='default
     thigh_rot = dict()
     for mkr in thigh_data.keys():
         thigh_rot[mkr] = (R[mask] @ (thigh_data[mkr][mask]
-                                     - pelvis_data[names.pelvis_c2][mask]).reshape((-1, 3, 1))).reshape((-1, 3))
+                                     - origin[mask]).reshape((-1, 3, 1))).reshape((-1, 3))
 
     n = mask.sum()  # number of samples
     m = len(thigh_rot.keys())  # number of markers
