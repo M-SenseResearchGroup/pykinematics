@@ -518,7 +518,7 @@ class SSRO:
         init_window : int, optional
             Number of samples to use for initialization of state and covariance. Default is 8.
         """
-        if 0 <= c <= 1:
+        if not 0 <= c <= 1:
             raise ValueError('c must be between 0 and 1')
         self.c = c
         self.N = N
@@ -573,7 +573,7 @@ class SSRO:
 
         self.P = identity(10) * 0.01
         self.a1, self.a2 = zeros(3), zeros(3)
-        self.a1_, self.a1_ = zeros(s1_w.shape), zeros(s1_w.shape)
+        self.a1_, self.a2_ = zeros(s1_w.shape), zeros(s1_w.shape)
         self.eps1, self.eps2 = zeros((3, 3)), zeros((3, 3))
 
         # storage for the states
