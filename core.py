@@ -122,7 +122,7 @@ class ImuAngles:
         # compute the relative orientation
         if self.verbose:
             print('Computing sensor relative orientation...')
-        srof = imu.orientation.SROFilter(g=self.grav_val, **self.orient_kwargs)
+        srof = imu.orientation.SSRO(grav=self.grav_val, **self.orient_kwargs)
         _, R_lt_lb = ImuAngles._compute_orientation(srof, trial_data['Lumbar'], trial_data['Left thigh'])
         _, R_rt_lb = ImuAngles._compute_orientation(srof, trial_data['Lumbar'], trial_data['Right thigh'])
 
