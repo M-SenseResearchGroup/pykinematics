@@ -528,7 +528,7 @@ class SSRO:
         self.grav = grav
         self.init_window = init_window
 
-    def run(self, s1_w, s2_w, s1_a, s2_a, s1_m, s2_m, dt):
+    def run(self, s1_a, s2_a, s1_w, s2_w, s1_m, s2_m, dt):
         """
         Run the SSRO algorithm on the data from two body-segment adjacent sensors. Rotation quaternion
         is from the second sensor to the first sensor.
@@ -581,14 +581,14 @@ class SSRO:
 
         # run the update step over all the data
         for i in range(s1_w.shape[0]):
-            self.update(s1_w[i, :], s2_w[i, :], s1_a[i, :], s2_a[i, :], s1_m[i, :], s2_m[i, :], dt, i)
+            self.update(s1_a[i, :], s2_a[i, :], s1_w[i, :], s2_w[i, :], s1_m[i, :], s2_m[i, :], dt, i)
             self.x_[i] = self.x
             self.a1_[i] = self.a1
             self.a2_[i] = self.a2
 
         return self.x_
 
-    def update(self, y_w1, y_w2, y_a1, y_a2, y_m1, y_m2, dt, j):
+    def update(self, y_a1, y_a2, y_w1, y_w2, y_m1, y_m2, dt, j):
         """
         Update the state vector and covariance for the next time point.
         """
