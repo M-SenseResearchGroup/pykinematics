@@ -206,7 +206,7 @@ class ImuAngles:
         joint_center = imu.joints.Center(g=self.grav_val, **self.center_kwargs)
 
         # if the center method is "SAC", we need to compute the relative orientation first
-        srof = imu.orientation.SROFilter(g=self.grav_val, **self.orient_kwargs)
+        srof = imu.orientation.SSRO(grav=self.grav_val, **self.orient_kwargs)
         if joint_center.method == 'SAC':
             _, jcR_lt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
                                                           joint_center_data['Left thigh'])
