@@ -6,7 +6,7 @@ Lukas Adamowicz
 
 V0.1 - March 8, 2019
 """
-from numpy import array, zeros, argsort, dot, arccos, cross, cos, sin
+from numpy import array, zeros, argsort, dot, arccos, cross, cos, sin, real
 from numpy.linalg import norm, eig
 
 
@@ -165,7 +165,7 @@ def quat_mean(q):
     vals, vecs = eig(M)  # Eigenvalues and vectors of M
     sort_ind = argsort(vals)  # get the indices of the eigenvalues sorted
 
-    q_mean = vecs[:, sort_ind[-1]]
+    q_mean = real(vecs[:, sort_ind[-1]])
 
     # ensure no discontinuities
     if q_mean[0] < 0:
