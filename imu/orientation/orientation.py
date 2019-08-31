@@ -6,14 +6,14 @@ Lukas Adamowicz
 
 V0.1 - March 8, 2019
 """
-from numpy import array, zeros, cross, sqrt, abs as nabs, arccos, sin, mean, identity, sum
-from numpy.linalg import norm
+from numpy import array, zeros, cross, sqrt, abs as nabs, arccos, sin, mean, identity, sum, outer
+from numpy.linalg import norm, inv as np_inv
 
 from pymotion.imu import utility
 from pymotion.imu.optimize import UnscentedKalmanFilter
 
 
-__all__ = ['MadgwickAHRS', 'OrientationComplementaryFilter', 'SROFilter']
+__all__ = ['MadgwickAHRS', 'OrientationComplementaryFilter', 'SSRO', 'OldSROFilter']
 
 
 class MadgwickAHRS:
@@ -494,7 +494,196 @@ class OrientationComplementaryFilter:
         return array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
 
 
-class SROFilter:
+class SSRO:
+    def __init__(self, c=0.04, N=16, error_factor=1e-15, sigma_g=1e-2, sigma_a=1e-1, grav=9.81, init_window=8):
+        """
+        Sensor-to-Sensor Relative Orientation estimation algorithm.
+
+        Parameters
+        ----------
+        c : float, optional
+            Value between 0 and 1 for the cutoff of the estimation of the gravity vector. Default is 0.04.
+        N : int, optional
+            Number of samples in the moving average measurement error estimation. Default is 16.
+        error_factor : float, optional
+            Error factor for the computation of the measurement error for the estimation of the rotation quaternion.
+            Default is 1e-15, recommended is to be slightly less than the values in Q, which can be accomplished with
+            values around dt**2 * sigma_g**2 * 0.1
+        sigma_g : float, optional
+            Gyroscope noise value. Default is 0.01
+        sigma_a : float, optional
+            Accelerometer noise value. Default is 0.1
+        grav : float, optional
+            Gravitational acceleration. Default is 9.81 m/s^2
+        init_window : int, optional
+            Number of samples to use for initialization of state and covariance. Default is 8.
+        """
+        if 0 <= c <= 1:
+            raise ValueError('c must be between 0 and 1')
+        self.c = c
+        self.N = N
+        self.err_factor = error_factor
+        self.sigma_g = sigma_g
+        self.sigma_a = sigma_a
+        self.grav = grav
+        self.init_window = init_window
+
+    def run(self, s1_w, s2_w, s1_a, s2_a, s1_m, s2_m, dt):
+        """
+        Run the SSRO algorithm on the data from two body-segment adjacent sensors. Rotation quaternion
+        is from the second sensor to the first sensor.
+
+        Parameters
+        ----------
+        s1_w : numpy.ndarray
+            Sensor 1 angular velocity in rad/s.
+        s2_w : numpy.ndarray
+            Sensor 2 angular velocity in rad/s.
+        s1_a : numpy.ndarray
+            Sensor 1 acceleration in m/s^2.
+        s2_a : numpy.ndarray
+            Sensor 2 acceleration in m/s^2.
+        s1_m : numpy.ndarray
+            Sensor 1 magnetometer readings.
+        s2_m : numpy.ndarray
+            Sensor 2 magnetometer readings.
+        dt : float, optional
+            Sample rate in seconds.
+
+        Returns
+        -------
+        q : numpy.ndarray
+            Rotation quaternion containing the rotation from sensor 2's frame to that of sensor 1's
+        """
+        # initialize values
+        self.x = zeros(10)  # state vector
+        g1_init = mean(s1_a[:self.init_window, :], axis=0)
+        g2_init = mean(s2_a[:self.init_window, :], axis=0)
+        self.x[:3] = g1_init / norm(g1_init)
+        self.x[3:6] = g2_init / norm(g2_init)
+
+        m1_init = mean(s1_m[:self.init_window, :], axis=0)
+        m2_init = mean(s2_m[:self.init_window, :], axis=0)
+        mg1_init = m1_init - sum(m1_init * self.x[0:3]) * self.x[0:3]
+        mg2_init = m2_init - sum(m2_init * self.x[3:6]) * self.x[3:6]
+
+        q_g = utility.vec2quat(self.x[3:6], self.x[:3])
+        q_m = utility.vec2quat(utility.quat2matrix(q_g) @ mg2_init, mg1_init)
+        self.x[6:] = utility.quat_mult(q_m, q_g)
+
+        self.P = identity(10) * 0.01
+        self.a1, self.a2 = zeros(3), zeros(3)
+        self.a1_, self.a1_ = zeros(s1_w.shape), zeros(s1_w.shape)
+        self.eps1, self.eps2 = zeros((3, 3)), zeros((3, 3))
+
+        # storage for the states
+        self.x_ = zeros((s1_w.shape[0], 10))
+
+        # run the update step over all the data
+        for i in range(s1_w.shape[0]):
+            self.update(s1_w[i, :], s2_w[i, :], s1_a[i, :], s2_a[i, :], s1_m[i, :], s2_m[i, :], dt, i)
+            self.x_[i] = self.x
+            self.a1_[i] = self.a1
+            self.a2_[i] = self.a2
+
+        return self.x_
+
+    def update(self, y_w1, y_w2, y_a1, y_a2, y_m1, y_m2, dt, j):
+        """
+        Update the state vector and covariance for the next time point.
+        """
+        # short hand names for parts of the state vector
+        g1 = self.x[:3]
+        g2 = self.x[3:6]
+        q_21 = self.x[6:]
+        # compute the difference in angular velocities in the second sensor's frame
+        R_21 = utility.quat2matrix(q_21)  # rotation from sensor 2 to sensor 1
+        y_w1_2 = R_21.T @ y_w1  # sensor 1 angular velocity in sensor 2 frame
+        diff_y_w = y_w2 - y_w1_2
+
+        # create the state transition matrix
+        A = zeros((10, 10))
+        A[0:3, 0:3] = identity(3) - dt * SSRO._skew(y_w1)
+        A[3:6, 3:6] = identity(3) - dt * SSRO._skew(y_w2)
+        A[6:, 6:] = identity(4) - 0.5 * dt * SSRO._skew_quat(diff_y_w)
+
+        # state transition covariance
+        Q = zeros((10, 10))
+        Q[0:3, 0:3] = -dt**2 * SSRO._skew(g1) @ (self.sigma_g**2 * identity(3)) @ SSRO._skew(g1)
+        Q[3:6, 3:6] = -dt**2 * SSRO._skew(g2) @ (self.sigma_g**2 * identity(3)) @ SSRO._skew(g2)
+        Q[6:, 6:] = -dt**2 * SSRO._skew_quat(q_21) @ (self.sigma_g**2 * identity(4)) @ SSRO._skew_quat(q_21)
+
+        # predicted state and covariance
+        xhat = A @ self.x
+        Phat = A @ self.P @ A.T + Q
+
+        # create the measurements
+        zt = zeros(10)
+        zt[0:3] = y_a1 - self.c * self.a1
+        zt[3:6] = y_a2 - self.c * self.a2
+        # quaternion measurement
+        q_g = utility.vec2quat(g2, g1)
+        mg1 = y_m1 - sum(y_m1 * g1) * g1
+        mg2 = y_m2 - sum(y_m2 * g2) * g2
+        q_m = utility.vec2quat(utility.quat2matrix(q_g) @ mg2, mg1)
+
+        zt[6:] = utility.quat_mult(q_m, q_g)
+
+        # measurement estimation matrix
+        H = zeros((10, 10))
+        H[:6, :6] = identity(6) * self.grav
+        H[6:, 6:] = identity(4)
+
+        # update estimates of the acceleration variance
+        self.eps1 += self.c**2 / self.N * outer(self.a1, self.a1)
+        self.eps1 -= self.c**2 / self.N * outer(self.a1_[j - self.N], self.a1_[j - self.N])
+        self.eps2 += self.c**2 / self.N * outer(self.a2, self.a2)
+        self.eps2 -= self.c**2 / self.N * outer(self.a2_[j - self.N], self.a2_[j - self.N])
+
+        # measurement covariance - essentially how much we trust the measurement vector
+        M = zeros((10, 10))
+        M[0:3, 0:3] = self.sigma_a**2 * identity(3) + self.eps1
+        M[3:6, 3:6] = self.sigma_a**2 * identity(3) + self.eps2
+        M[6:, 6:] = identity(4) * self.err_factor * (norm(self.a1) + norm(self.a2))
+
+        # kalman gain and state estimation
+        K = Phat @ H.T @ np_inv(H @ Phat @ H.T + M)
+        xbar = xhat + K @ (zt - H @ xhat)  # not yet normalized
+        self.P = (identity(10) - K @ H) @ Phat
+
+        # normalize the state vector
+        self.x[0:3] = xbar[0:3] / norm(xbar[0:3])
+        self.x[3:6] = xbar[3:6] / norm(xbar[3:6])
+        self.x[6:] = xbar[6:] / norm(xbar[6:])
+
+        # acceleration values
+        self.a1 = y_a1 - self.x[0:3] * self.grav
+        self.a2 = y_a2 - self.x[3:6] * self.grav
+
+    @staticmethod
+    def _skew(v):
+        return array([[0, -v[2], v[1]],
+                      [v[2], 0, -v[0]],
+                      [-v[1], v[0], 0]])
+
+    @staticmethod
+    def _skew_quat(v):
+        if v.size == 3:
+            Q = array([[0, v[0], v[1], v[2]],
+                       [-v[0], 0, -v[2], v[1]],
+                       [-v[1], v[2], 0, -v[0]],
+                       [-v[2], -v[1], v[0], 0]])
+        elif v.size == 4:
+            Q = array([[v[0], v[1], v[2], v[3]],
+                       [-v[1], v[0], -v[3], v[2]],
+                       [-v[2], v[3], v[0], -v[1]],
+                       [-v[3], -v[2], v[1], v[0]]])
+        else:
+            raise ValueError("Input can only have 3 or 4 elements")
+        return Q
+
+
+class OldSROFilter:
     def __init__(self, Q=identity(4)*0.1, error_mode='linear', error_factor=0.1, g=9.81, s1_ahrs_beta=0.041,
                  s2_ahrs_beta=0.041, init_window=8, smooth_quaternions=False):
         """
@@ -599,7 +788,7 @@ class SROFilter:
         P_init = identity(4) * 0.1  # assume our initial guess is fairly good
         R = identity(4)  # Measurement will have some error
 
-        ukf = UnscentedKalmanFilter(q_init, P_init, SROFilter._F, SROFilter._H, self.Q, R)
+        ukf = UnscentedKalmanFilter(q_init, P_init, OldSROFilter._F, OldSROFilter._H, self.Q, R)
 
         self.q_ = zeros((n, 4))  # storage for ukf output
         self.q_[0] = q_init  # store the initial guess
