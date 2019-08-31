@@ -78,7 +78,7 @@ class ImuAngles:
 
         self.verbose = verbose
 
-    def estimate(self, trial_data):
+    def estimate(self, trial_data, return_orientation=False):
         """
         Estimate joint angles from data during a trial of interest.
 
@@ -88,6 +88,8 @@ class ImuAngles:
             Nested dictionary containing the necessary data to compute joint angles. Top level keys required are
             'Lumbar', 'Left thigh', and 'Right thigh', which all have sub-level keys of 'Acceleration',
             'Angular velocity', and 'Magnetic field'.
+        return_orientation : bool, optional
+            Return the estimates of the relative orientation. Default is False.
 
         Returns
         -------
@@ -97,6 +99,12 @@ class ImuAngles:
         right_hip_angles : numpy.ndarray
             (N, 3) array of hip angles for the right hip, in the order Flexion - Extension, Ad / Abduction, and
             Internal - External rotation.
+        R_Lthigh_lumbar : numpy.ndarray, optional
+            Rotations from the left thigh sensor to the lumbar sensor for all time points in the provided data.
+            Only returned if `return_orientation` is True.
+        R_Rthigh_lumbar : numpy.ndarray, optional
+            Rotations from the right thigh sensor to the lumbar sensor for all time points in the provided data.
+            Only returned if `return_orientation` is True.
         """
         # check to ensure that the data provided has the required sensors
         ImuAngles._check_required_sensors(trial_data, 'trial')
@@ -124,7 +132,10 @@ class ImuAngles:
         l_hip_ang = imu.angles.hip_from_frames(self.pelvis_AF, self.l_thigh_AF, R_lt_lb, side='left')
         r_hip_ang = imu.angles.hip_from_frames(self.pelvis_AF, self.r_thigh_AF, R_rt_lb, side='right')
 
-        return l_hip_ang, r_hip_ang
+        if return_orientation:
+            return l_hip_ang, r_hip_ang, R_lt_lb, R_rt_lb
+        else:
+            return l_hip_ang, r_hip_ang
 
     def calibrate(self, static_data, joint_center_data):
         """
