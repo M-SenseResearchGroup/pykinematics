@@ -5,7 +5,7 @@ GNU GPL v3.0
 Lukas Adamowicz
 V0.1 - April 10, 2019
 """
-from numpy import array, zeros, argmin, ceil, mean, std, sqrt
+from numpy import array, zeros, argmin, ceil, mean, std, sqrt, nanmean, nanstd
 
 
 def mov_avg(seq, window):
@@ -37,15 +37,20 @@ def mov_avg(seq, window):
     pad = int(ceil(window / 2))
 
     # compute first window stats
-    m_mn[pad] = mean(seq[:window], axis=0)
-    m_st[pad] = std(seq[:window], axis=0, ddof=1)**2  # ddof of 1 indicates sample standard deviation, no population
+    if pad < seq.shape[0]:
+        m_mn[pad] = mean(seq[:window], axis=0)
+        m_st[pad] = std(seq[:window], axis=0, ddof=1)**2  # ddof of 1 indicates sample standard deviation, no population
 
-    # compute moving mean and standard deviation
-    for i in range(1, seq.shape[0] - window):
-        diff_fl = seq[window + i - 1] - seq[i - 1]  # difference in first and last elements of sliding window
-        m_mn[pad + i] = m_mn[pad + i - 1] + diff_fl / window
-        m_st[pad + i] = m_st[pad + i - 1] + (seq[window + i - 1] - m_mn[pad + i] + seq[i - 1] -
-                                             m_mn[pad + i - 1]) * diff_fl / (window - 1)
+        # compute moving mean and standard deviation
+        for i in range(1, seq.shape[0] - window):
+            diff_fl = seq[window + i - 1] - seq[i - 1]  # difference in first and last elements of sliding window
+            m_mn[pad + i] = m_mn[pad + i - 1] + diff_fl / window
+            m_st[pad + i] = m_st[pad + i - 1] + (seq[window + i - 1] - m_mn[pad + i] + seq[i - 1] -
+                                                 m_mn[pad + i - 1]) * diff_fl / (window - 1)
+    else:
+        pad = 1
+        m_mn[:] = nanmean(seq, axis=0)
+        m_st[:] = nanstd(seq, axis=0, ddof=1)**2
 
     m_st = sqrt(abs(m_st))  # added absolute value to ensure that any round off error doesn't effect the results
 
