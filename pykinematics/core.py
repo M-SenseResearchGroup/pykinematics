@@ -122,7 +122,7 @@ class ImuAngles:
             print('-------------------------------------------------\nPreprocessing trial data...')
 
         # scale the acceleration data
-        for sensor in self.acc_scales.keys():
+        for sensor in trial_data.keys():
             trial_data[sensor]['Acceleration'] *= self.acc_scales[sensor]
 
         # filter the data
