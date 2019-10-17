@@ -8,9 +8,9 @@ V0.1 - April 10, 2019
 from numpy import cross, stack, zeros, isnan, sum as nsum, array, mean
 from numpy.linalg import norm, solve
 
-from pymotion.omc import utility
-from pymotion.omc import segmentFrames
-from pymotion import common
+from pykinematics.omc import utility
+from pykinematics.omc import segmentFrames
+from pykinematics import common
 
 
 def compute_hip_center(pelvis_data, thigh_data, R, origin, marker_names='default', tol=1e-4):
