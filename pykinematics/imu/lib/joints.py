@@ -15,7 +15,7 @@ __all__ = ['Center', 'KneeAxis', 'correct_knee', 'fixed_axis']
 
 
 class Center:
-    def __init__(self, g=9.81, method='SAC', mask_input=True, min_samples=1000, mask_data='acc', opt_kwargs={}):
+    def __init__(self, g=9.81, method='SAC', mask_input=True, min_samples=1000, mask_data='acc', opt_kwargs=None):
         """
         Object for joint center computation
 

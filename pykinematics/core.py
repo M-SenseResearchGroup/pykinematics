@@ -216,17 +216,15 @@ class ImuAngles:
 
         # if the center method is "SAC", we need to compute the relative orientation first
         srof = imu.orientation.SSRO(grav=self.grav_val, **self.orient_kwargs)
-        if joint_center.method == 'SAC':
-            _, jcR_lt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
-                                                          joint_center_data['Left thigh'])
-            _, jcR_rt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
-                                                          joint_center_data['Right thigh'])
-            _, jcR_ls_lt = ImuAngles._compute_orientation(srof, joint_center_data['Left thigh'],
-                                                          joint_center_data['Left shank'])
-            _, jcR_rs_rt = ImuAngles._compute_orientation(srof, joint_center_data['Right thigh'],
-                                                          joint_center_data['Right shank'])
-        else:
-            jcR_lt_lb, jcR_rt_lb, jcR_ls_lt, jcR_rs_rt = None, None, None, None
+
+        _, jcR_lt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
+                                                      joint_center_data['Left thigh'])
+        _, jcR_rt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
+                                                      joint_center_data['Right thigh'])
+        _, jcR_ls_lt = ImuAngles._compute_orientation(srof, joint_center_data['Left thigh'],
+                                                      joint_center_data['Left shank'])
+        _, jcR_rs_rt = ImuAngles._compute_orientation(srof, joint_center_data['Right thigh'],
+                                                      joint_center_data['Right shank'])
 
         # compute the joint centers
         hip_l_lb, hip_l_t, hip_l_res = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
@@ -345,12 +343,12 @@ class ImuAngles:
         R_21 : numpy.ndarray
             (N, 3, 3) array of rotation matrices corresponding to the quaternions of 'q'
         """
-        q = sro.run(sensor1['Acceleration'], sensor2['Acceleration'], sensor1['Angular velocity'],
+        x = sro.run(sensor1['Acceleration'], sensor2['Acceleration'], sensor1['Angular velocity'],
                     sensor2['Angular velocity'], sensor1['Magnetic field'], sensor2['Magnetic field'], sensor1['dt'])
+        # x is the length 10 vector of [gravity_1, gravity_2, q_21]
+        R = imu.utility.quat2matrix(x[:, 6:])  # convert to a rotation matrix
 
-        R = imu.utility.quat2matrix(q)  # convert to a rotation matrix
-
-        return q, R
+        return x[:, 6:], R
 
     def _apply_filter_dict(self, data, comp_angular_accel=False):
         """
