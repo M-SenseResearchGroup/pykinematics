@@ -9,18 +9,18 @@ vers = fid.readlines()[-1].split()[-1].strip("\"'")
 fid.close()
 
 setuptools.setup(
-    name="test",
+    name="pykinematics",
     version=vers,
-    author="Sample Author",
-    author_email="author.email@email",
-    description="Sample project description",
+    author="Lukas Adamowicz",
+    author_email="lukas.adamowicz95@gmail.com",
+    description="Calculation of hip joint angles from wearable inertial sensors and optical motion capture.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/",  # project url, most likely a github link
-    download_url="https://pypi.org/test",  # link to where the package can be downloaded, most likely PyPI
-    project_urls={
-        "Documentation": "https://test.readthedocs.io/en/latest/"
-    },
+    url="https://github.com/M-SenseResearchGroup/pymotion",  # project url, most likely a github link
+    # download_url="https://github.com/M-SenseResearchGroup/pymotion",  # link to where the package can be downloaded, most likely PyPI
+    # project_urls={
+    #     "Documentation": "https://github.com/M-SenseResearchGroup/pymotion"
+    # },
     include_pacakge_data=False,  # set to True if you have data to package, ie models or similar
     # package_data={'package': ['*.csv']},  # currently adds any csv files alongside the top level __init__.py
     # package_data={'package.module': ['data.csv']},  # if data.csv is in a separate module
