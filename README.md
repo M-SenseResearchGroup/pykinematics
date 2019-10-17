@@ -9,3 +9,15 @@ sensor-to-segment alignment.
 - Python >=3.6
 - Numpy
 - Scipy
+
+## Installation
+
+``pykinematics`` is not currently on PyPI. To install, run the following in the terminal:
+
+```shell script
+pip install git+https://github.com/M-SenseResearchGroup/pymotion
+```
+
+## Sample Usage
+
+WIP
