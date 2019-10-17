@@ -51,3 +51,7 @@ mimu_estimator.calibrate(static_calibration_data, star_calibration_data)
 # compute the hip joint angles for the Fast Walking on a treadmill
 left_hip_angles, right_hip_angles = mimu_estimator.estimate(walk_fast_data, return_orientation=False)
 ```
+
+Right hip angles from the sample data for walking fast:
+
+![Sample right hip angles](https://github.com/M-SenseResearchGroup/pymotion/blob/master/images/sample_data_right_hip_angles.png "Sample right hip joint angles")
