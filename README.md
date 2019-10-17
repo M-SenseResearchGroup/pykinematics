@@ -4,6 +4,14 @@ Measurement Unit (MIMU) wearable sensors and existing Optical Motion Capture (OM
 have been validated against OMC, and include novel methods for estimating sensor-to-sensor relative orientation and 
 sensor-to-segment alignment.
 
+## Validation
+
+The novel algorithms in ``pykinematics`` have been validated against OMC in a human subjects
+population. The validation results, and algorithm descriptions can be found in:
+
+- L. Adamowicz, R. Gurchiek, J. Ferri, A. Ursiny, N. Fiorentino, R. McGinnis. "Novel Algorithms for Estimating Relative
+Orientation and Hip Joint Angles from Wearable Sensors." *Sensors*. *Under Review*
+
 ## Requirements
 
 - Python >=3.6
