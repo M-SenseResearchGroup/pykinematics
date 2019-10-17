@@ -46,7 +46,10 @@ class Center:
         self.mask_input = mask_input
         self.min_samples = min_samples
         self.mask_data = mask_data
-        self.opt_kwargs = opt_kwargs
+        if opt_kwargs is not None:
+            self.opt_kwargs = opt_kwargs
+        else:
+            self.opt_kwargs = {}
 
     def compute(self, prox_a, dist_a, prox_w, dist_w, prox_wd, dist_wd, R_dist_prox):
         """
@@ -223,7 +226,10 @@ class KneeAxis:
         """
         self.mask_input = mask_input
         self.min_samples = min_samples
-        self.opt_kwargs = opt_kwargs
+        if opt_kwargs is not None:
+            self.opt_kwargs = opt_kwargs
+        else:
+            self.opt_kwargs = {}
 
     def compute(self, thigh_w, shank_w):
         """
