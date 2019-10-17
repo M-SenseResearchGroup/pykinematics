@@ -11,8 +11,19 @@ sensor-to-segment alignment.
 - Scipy
 - h5py*
 
+pip should automatically collect any uninstalled dependencies.
+
 \* h5py is required to run the example code in `/scripts/example_code.py`, as the sample data 
-provided (see *Example Usage*) is stored in the `.hdf` format.
+provided (see *Example Usage*) is stored in the `.hdf` format. Pip will not catch and install
+`h5py` as it is not used by ``pykinematics``, and must be installed manually to run the example code.
+
+```shell script
+pip install h5py
+```
+or if using Anaconda
+```shell script
+conda install -c anaconda h5py
+```
 
 ## Installation
 
@@ -20,6 +31,11 @@ provided (see *Example Usage*) is stored in the `.hdf` format.
 
 ```shell script
 pip install git+https://github.com/M-SenseResearchGroup/pymotion
+```
+
+``pykinematics`` can be uninstalled by running
+```shell script
+pip uninstall pykinematics
 ```
 
 ## Example Usage
