@@ -8,7 +8,7 @@ V0.1 - April 10, 2019
 from numpy import cross, stack
 from numpy.linalg import norm
 
-from pymotion.omc import utility
+from pykinematics.omc import utility
 
 
 def pelvis(marker_data, use_cluster=False, R_s_c=None, marker_names='default'):

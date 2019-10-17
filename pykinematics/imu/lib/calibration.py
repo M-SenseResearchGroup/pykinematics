@@ -9,8 +9,8 @@ V0.1 - March 8, 2019
 from numpy import mean, ceil, cross
 from numpy.linalg import norm
 
-from pymotion.imu import utility
-from pymotion import common
+from pykinematics.imu import utility
+from pykinematics import common
 
 
 __all__ = ['get_acc_scale', 'static']

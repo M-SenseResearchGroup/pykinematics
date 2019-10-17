@@ -9,8 +9,8 @@ from numpy import mean, diff
 from scipy.signal import butter, filtfilt
 from warnings import warn
 
-from pymotion import imu
-from pymotion import omc
+from pykinematics import imu
+from pykinematics import omc
 
 
 class ImuAngles:

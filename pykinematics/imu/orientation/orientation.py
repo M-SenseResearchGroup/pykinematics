@@ -9,8 +9,8 @@ V0.1 - March 8, 2019
 from numpy import array, zeros, cross, sqrt, abs as nabs, arccos, sin, mean, identity, sum, outer
 from numpy.linalg import norm, inv as np_inv
 
-from pymotion.imu import utility
-from pymotion.imu.optimize import UnscentedKalmanFilter
+from pykinematics.imu import utility
+from pykinematics.imu.optimize import UnscentedKalmanFilter
 
 
 __all__ = ['MadgwickAHRS', 'OrientationComplementaryFilter', 'SSRO', 'OldSROFilter']
