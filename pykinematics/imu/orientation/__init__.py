@@ -1,1 +1,1 @@
-from .orientation import *
+from pykinematics.imu.orientation.orientation import *

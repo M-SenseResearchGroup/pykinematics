@@ -1,8 +1,8 @@
-from pymotion.imu.lib import angles
-from pymotion.imu.lib import calibration
-from pymotion.imu.lib import joints
-from pymotion.imu import optimize
-from pymotion.imu import orientation
-from pymotion.imu import utility
+from pykinematics.imu.lib import angles
+from pykinematics.imu.lib import calibration
+from pykinematics.imu.lib import joints
+from pykinematics.imu import optimize
+from pykinematics.imu import orientation
+from pykinematics.imu import utility
 
 __all__ = ['optimize', 'orientation', 'angles', 'calibration', 'joints']
