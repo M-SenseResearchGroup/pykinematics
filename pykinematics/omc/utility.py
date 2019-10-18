@@ -12,6 +12,13 @@ from dataclasses import dataclass
 
 @dataclass
 class MarkerNames:
+    """
+    Data class for storing the labels of specific markers needed to calculate hip joint angles. Each class attribute
+    is the name of a specific marker location, and its value is the name of that marker in the optical motion capture
+    data used to estimate hip joint angles.
+
+    To get a list of the markers, use :meth:`pykinematics.omc.default_marker_names`.
+    """
     # pelvis markers
     left_asis: str = 'left_asis'
     right_asis: str = 'right_asis'
@@ -40,6 +47,21 @@ class MarkerNames:
     right_thigh_c1: str = 'right_thigh_cluster1'
     right_thigh_c2: str = 'right_thigh_cluster2'
     right_thigh_c3: str = 'right_thigh_cluster3'
+
+
+def default_marker_names():
+    """
+    Print and return the default marker names.
+
+    Returns
+    -------
+    marker_names : pykinematics.omc.MarkerNames
+        Object for storing the marker names and their associated label in the optical motion capture marker data.
+    """
+    for key in MarkerNames.__dict__.keys():
+        print(f'{key}: {MarkerNames.__dict__[key]}')
+
+    return MarkerNames
 
 
 def create_cluster_frame(marker_data, segment_name, marker_names='default'):
