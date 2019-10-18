@@ -13,7 +13,7 @@ from pykinematics import imu
 from pykinematics import omc
 
 
-class ImuAngles:
+class MimuAngles:
     def __init__(self, static_window=1.0, gravity_value=9.81, filter_values=None, angular_velocity_derivative_order=2,
                  joint_center_kwargs=None, orientation_kwargs=None, correct_knee=True, knee_axis_kwargs=None,
                  verbose=True):
@@ -87,13 +87,13 @@ class ImuAngles:
 
         self.verbose = verbose
 
-    def estimate(self, trial_data, return_orientation=False):
+    def estimate(self, task_data, return_orientation=False):
         """
         Estimate joint angles from data during a trial of interest.
 
         Parameters
         ----------
-        trial_data : dict
+        task_data : dict
             Dictionary of data from a task to compute the hip joint angles for. Required keys/sensors are Lumbar,
             Left and Right thighs. See the *Notes* for *ImuAngles.calibrate*.
         return_orientation : bool, optional
@@ -115,24 +115,24 @@ class ImuAngles:
             Only returned if `return_orientation` is True.
         """
         # check to ensure that the data provided has the required sensors
-        ImuAngles._check_required_sensors(trial_data, 'trial')
+        MimuAngles._check_required_sensors(task_data, 'trial')
 
         if self.verbose:
             print('-------------------------------------------------\nPreprocessing trial data...')
 
         # scale the acceleration data
-        for sensor in trial_data.keys():
-            trial_data[sensor]['Acceleration'] *= self.acc_scales[sensor]
+        for sensor in task_data.keys():
+            task_data[sensor]['Acceleration'] *= self.acc_scales[sensor]
 
         # filter the data
-        self._apply_filter_dict(trial_data, comp_angular_accel=False)  # don't need angular acceleration
+        self._apply_filter_dict(task_data, comp_angular_accel=False)  # don't need angular acceleration
 
         # compute the relative orientation
         if self.verbose:
             print('Computing sensor relative orientation...')
         srof = imu.orientation.SSRO(grav=self.grav_val, **self.orient_kwargs)
-        _, R_lt_lb = ImuAngles._compute_orientation(srof, trial_data['Lumbar'], trial_data['Left thigh'])
-        _, R_rt_lb = ImuAngles._compute_orientation(srof, trial_data['Lumbar'], trial_data['Right thigh'])
+        _, R_lt_lb = MimuAngles._compute_orientation(srof, task_data['Lumbar'], task_data['Left thigh'])
+        _, R_rt_lb = MimuAngles._compute_orientation(srof, task_data['Lumbar'], task_data['Right thigh'])
 
         # compute joint angles
         if self.verbose:
@@ -210,8 +210,8 @@ class ImuAngles:
             - Magnetic field
         """
         # check to ensure that the data provided has the required sensors
-        ImuAngles._check_required_sensors(static_data, 'static')
-        ImuAngles._check_required_sensors(joint_center_data, 'joint center')
+        MimuAngles._check_required_sensors(static_data, 'static')
+        MimuAngles._check_required_sensors(joint_center_data, 'joint center')
 
         if self.verbose:
             print('\n-----------------------------------------------------\n'
@@ -247,33 +247,33 @@ class ImuAngles:
         # if the center method is "SAC", we need to compute the relative orientation first
         srof = imu.orientation.SSRO(grav=self.grav_val, **self.orient_kwargs)
 
-        _, jcR_lt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
-                                                      joint_center_data['Left thigh'])
-        _, jcR_rt_lb = ImuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
-                                                      joint_center_data['Right thigh'])
-        _, jcR_ls_lt = ImuAngles._compute_orientation(srof, joint_center_data['Left thigh'],
-                                                      joint_center_data['Left shank'])
-        _, jcR_rs_rt = ImuAngles._compute_orientation(srof, joint_center_data['Right thigh'],
-                                                      joint_center_data['Right shank'])
+        _, jcR_lt_lb = MimuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
+                                                       joint_center_data['Left thigh'])
+        _, jcR_rt_lb = MimuAngles._compute_orientation(srof, joint_center_data['Lumbar'],
+                                                       joint_center_data['Right thigh'])
+        _, jcR_ls_lt = MimuAngles._compute_orientation(srof, joint_center_data['Left thigh'],
+                                                       joint_center_data['Left shank'])
+        _, jcR_rs_rt = MimuAngles._compute_orientation(srof, joint_center_data['Right thigh'],
+                                                       joint_center_data['Right shank'])
 
         # compute the joint centers
-        hip_l_lb, hip_l_t, hip_l_res = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
-                                                                 joint_center_data['Left thigh'], jcR_lt_lb)
-        hip_r_lb, hip_r_t, hip_r_res = ImuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
-                                                                 joint_center_data['Right thigh'], jcR_rt_lb)
-        knee_l_t, knee_l_s, knee_l_res = ImuAngles._compute_center(joint_center, joint_center_data['Left thigh'],
-                                                                   joint_center_data['Left shank'], jcR_ls_lt,
-                                                                   self.correct_knee, self.knee_axis_kwargs)
-        knee_r_t, knee_r_s, knee_r_res = ImuAngles._compute_center(joint_center, joint_center_data['Right thigh'],
-                                                                   joint_center_data['Right shank'], jcR_rs_rt,
-                                                                   self.correct_knee, self.knee_axis_kwargs)
+        hip_l_lb, hip_l_t, hip_l_res = MimuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
+                                                                  joint_center_data['Left thigh'], jcR_lt_lb)
+        hip_r_lb, hip_r_t, hip_r_res = MimuAngles._compute_center(joint_center, joint_center_data['Lumbar'],
+                                                                  joint_center_data['Right thigh'], jcR_rt_lb)
+        knee_l_t, knee_l_s, knee_l_res = MimuAngles._compute_center(joint_center, joint_center_data['Left thigh'],
+                                                                    joint_center_data['Left shank'], jcR_ls_lt,
+                                                                    self.correct_knee, self.knee_axis_kwargs)
+        knee_r_t, knee_r_s, knee_r_res = MimuAngles._compute_center(joint_center, joint_center_data['Right thigh'],
+                                                                    joint_center_data['Right shank'], jcR_rs_rt,
+                                                                    self.correct_knee, self.knee_axis_kwargs)
 
         if self.verbose:
             print('------------------------------------------------------------')
             print(
-                f'Left hip:  Residual: {hip_l_res:0.3f}\nLumbar: ({hip_l_lb[0]*100:0.2f}, {hip_l_lb[1]*100:0.2f}, '
-                f'{hip_l_lb[2]*100:0.2f})cm    Left thigh: ({hip_l_t[0]*100:0.2f}, {hip_l_t[1]*100:0.2f}, '
-                f'{hip_l_t[2]*100:0.2f})cm')
+                f'Left hip:  Residual: {hip_l_res:0.3f}\nLumbar: ({hip_l_lb[0] * 100:0.2f}, {hip_l_lb[1] * 100:0.2f}, '
+                f'{hip_l_lb[2] * 100:0.2f})cm    Left thigh: ({hip_l_t[0] * 100:0.2f}, {hip_l_t[1] * 100:0.2f}, '
+                f'{hip_l_t[2] * 100:0.2f})cm')
             print(
                 f'Right hip:  Residual: {hip_r_res:0.3f}\nLumbar: ({hip_r_lb[0] * 100:0.2f}, {hip_r_lb[1] * 100:0.2f}, '
                 f'{hip_r_lb[2] * 100:0.2f})cm    Right thigh: ({hip_r_t[0] * 100:0.2f}, {hip_r_t[1] * 100:0.2f}, '
@@ -295,8 +295,8 @@ class ImuAngles:
         self.r_thigh_axis = imu.joints.fixed_axis(knee_r_t, hip_r_t, center_to_sensor=True)
 
         # compute the relative orientation between sensors during the static data
-        q_lt_lb, _ = ImuAngles._compute_orientation(srof, static_data['Lumbar'], static_data['Left thigh'])
-        q_rt_lb, _ = ImuAngles._compute_orientation(srof, static_data['Lumbar'], static_data['Right thigh'])
+        q_lt_lb, _ = MimuAngles._compute_orientation(srof, static_data['Lumbar'], static_data['Left thigh'])
+        q_rt_lb, _ = MimuAngles._compute_orientation(srof, static_data['Lumbar'], static_data['Right thigh'])
 
         # process the static calibration
         AF = imu.calibration.static(q_lt_lb, q_rt_lb, self.pelvis_axis, self.l_thigh_axis, self.r_thigh_axis,
@@ -395,26 +395,28 @@ class ImuAngles:
             # compute the sampling time difference, 1/f_sample
             data[sensor]['dt'] = mean(diff(data[sensor]['Time']))
             # apply the specified filter to the acceleration
-            data[sensor]['Acceleration'] = ImuAngles._apply_filter(data[sensor]['Acceleration'], data[sensor]['dt'],
-                                                                   self.filt_vals['Acceleration'][0],
-                                                                   self.filt_vals['Acceleration'][1])
+            data[sensor]['Acceleration'] = MimuAngles._apply_filter(data[sensor]['Acceleration'], data[sensor]['dt'],
+                                                                    self.filt_vals['Acceleration'][0],
+                                                                    self.filt_vals['Acceleration'][1])
             # apply the specified filter to the angular velocity
-            data[sensor]['Angular velocity'] = ImuAngles._apply_filter(data[sensor]['Angular velocity'],
-                                                                       data[sensor]['dt'],
-                                                                       self.filt_vals['Angular velocity'][0],
-                                                                       self.filt_vals['Angular velocity'][1])
+            data[sensor]['Angular velocity'] = MimuAngles._apply_filter(data[sensor]['Angular velocity'],
+                                                                        data[sensor]['dt'],
+                                                                        self.filt_vals['Angular velocity'][0],
+                                                                        self.filt_vals['Angular velocity'][1])
             # apply the specified filter to the magnetic field reading
-            data[sensor]['Magnetic field'] = ImuAngles._apply_filter(data[sensor]['Magnetic field'], data[sensor]['dt'],
-                                                                     self.filt_vals['Magnetic field'][0],
-                                                                     self.filt_vals['Magnetic field'][1])
+            data[sensor]['Magnetic field'] = MimuAngles._apply_filter(data[sensor]['Magnetic field'],
+                                                                      data[sensor]['dt'],
+                                                                      self.filt_vals['Magnetic field'][0],
+                                                                      self.filt_vals['Magnetic field'][1])
 
             if comp_angular_accel:
                 data[sensor]['Angular acceleration'] = imu.utility.calc_derivative(data[sensor]['Angular velocity'],
-                                                                                   data[sensor]['dt'], order=self.wd_ord)
-                data[sensor]['Angular acceleration'] = ImuAngles._apply_filter(data[sensor]['Angular acceleration'],
-                                                                               data[sensor]['dt'],
-                                                                               self.filt_vals['Angular acceleration'][0],
-                                                                               self.filt_vals['Angular acceleration'][1])
+                                                                                   data[sensor]['dt'],
+                                                                                   order=self.wd_ord)
+                data[sensor]['Angular acceleration'] = MimuAngles._apply_filter(data[sensor]['Angular acceleration'],
+                                                                                data[sensor]['dt'],
+                                                                                self.filt_vals['Angular acceleration'][0],
+                                                                                self.filt_vals['Angular acceleration'][1])
 
     @staticmethod
     def _apply_filter(x, dt, filt_order, filt_cutoff):
@@ -490,17 +492,56 @@ class ImuAngles:
 
 
 class OmcAngles:
-    def __init__(self, marker_names='default', window=1):
+    def __init__(self, marker_names='default', window=1.0):
+        """
+        Estimation of hip joint angles from optical motion capture marker trajectories.
+
+        Parameters
+        ----------
+        marker_names : {default, pykinematics.omc.MarkerNames}, optional
+            List of marker names and what they are named in the data provided. Default value is `default`, which
+            will use the default values, which can be seen through :meth:`pykinematics.omc.default_marker_names`.
+        window : float, optional
+            Window size in seconds of the duration to use to find the period of best stillness. Default is 1s.
+        """
         self.marker_names = marker_names
         self.window_t = window
 
-    def estimate(self, trial_data, pelvis_cluster=False):
+        # initialize things used later
+        self.pelvis = None
+        self.left_thigh = None
+        self.right_thigh = None
+
+    def estimate(self, task_data, pelvis_cluster=False):
+        """
+        Estimate hip joint angles from optical motion capture marker trajectories, following calibration.
+
+        Parameters
+        ----------
+        task_data : dict
+            Dictionary of marker position data for a static standing trial, separated based on segment attached to.
+            Requires at least Pelvis, Left thigh, and Right thigh. See *Notes* for the layout.
+        pelvis_cluster : bool, optional
+            Use the pelvis cluster to anatomical frame to create the anatomical frame for the trial, or create the
+            pelvis anatomical frame from the marker trajectories (requires that the markers used to create the frame
+            be present for the trial).
+
+        Returns
+        -------
+        left_hip_angles : numpy.ndarray
+            Array of hip angles for the left hip, in the order Flexion - Extension, Ad / Abduction, and
+            Internal - External rotation.
+        right_hip_angles : numpy.ndarray
+            Array of hip angles for the right hip, in the order Flexion - Extension, Ad / Abduction, and
+            Internal - External rotation.
+        """
         # create the segment frames
-        pelvis_af = omc.segmentFrames.pelvis(trial_data[0], use_cluster=pelvis_cluster, R_s_c=self.pelvis[2],
+        pelvis_af = omc.segmentFrames.pelvis(task_data['Pelvis'], use_cluster=pelvis_cluster, R_s_c=self.pelvis[2],
                                              marker_names=self.marker_names)
-        lthigh_af = omc.segmentFrames.thigh(trial_data[1], 'left', use_cluster=True, R_s_c=self.left_thigh[2],
+        lthigh_af = omc.segmentFrames.thigh(task_data['Left thigh'], 'left', use_cluster=True, R_s_c=self.left_thigh[2],
                                             marker_names=self.marker_names)
-        rthigh_af = omc.segmentFrames.thigh(trial_data[2], 'right', use_cluster=True, R_s_c=self.right_thigh[2],
+        rthigh_af = omc.segmentFrames.thigh(task_data['Right thigh'], 'right', use_cluster=True,
+                                            R_s_c=self.right_thigh[2],
                                             marker_names=self.marker_names)
 
         # compute the joint angles
@@ -510,7 +551,55 @@ class OmcAngles:
         return l_hip_angles, r_hip_angles
 
     def calibrate(self, static_data, joint_center_data, fs):
+        """
+        Calibrate optical motion capture segments based on standard definitions of fixed and floating axes.
+
+        Parameters
+        ----------
+        static_data : dict
+            Dictionary of marker position data for a static standing trial, separated based on segment attached to.
+            Requires at least Pelvis, Left thigh, and Right thigh. See *Notes* for the layout.
+        joint_center_data : dict
+            Dictionary of marker position data for a static standing trial, separated based on segment attached to.
+            Requires at least Pelvis, Left thigh, and Right thigh. See *Notes* for the layout.
+        fs : float
+            Sampling frequency in Hz.
+
+        Attributes
+        ----------
+        self.pelvis
+            3-tuple of pelvis anatomical frame, rotation from world to pelvis cluster frame, and constant rotation from
+            segment frame to cluster frame.
+        self.left_thigh : tuple
+            3-tuple of left thigh anatomical frame, rotation from world to the left thigh cluster frame, and constant
+            rotation from segment frame to cluster frame.
+        self.right_thigh : tuple
+            3-tuple of right thigh anatomical frame, rotation from world to the right thigh cluster frame, and constant
+            rotation from segment frame to cluster frame.
+
+        Notes
+        -----
+        Data dictionary key-level schematic:
+
+        - Pelvis
+            - left_asis
+            - right_asis
+            - ...
+        - Left thigh
+            - left_lat_femoral_epicondyle
+            - ...
+        - Right thigh
+            - right_lat_femoral_epicondyle
+            - ...
+        """
+        # TODO update omc.calibration.process_static to accept dictionaries. Or change the whole input
+        # change to dumb format specified originally
+        static_data_tuple = (static_data['Pelvis'], static_data['Left thigh'], static_data['Right thigh'])
+        joint_center_data_tuple = (joint_center_data['Pelvis'], joint_center_data['Left thigh'],
+                                   joint_center_data['Right thigh'])
+
         window = int(self.window_t * fs)
         # process the calibration data
-        self.pelvis, self.left_thigh, self.right_thigh = omc.calibration.process_static(static_data, joint_center_data,
+        self.pelvis, self.left_thigh, self.right_thigh = omc.calibration.process_static(static_data_tuple,
+                                                                                        joint_center_data_tuple,
                                                                                         window, self.marker_names)

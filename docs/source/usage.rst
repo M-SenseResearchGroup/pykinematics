@@ -6,7 +6,7 @@ Usage Examples
 
 Basic Use: MIMU Algorithms
 --------------------------
-At the core of ``pykinematics`` for processing MIMU data is the *ImuAngles* class, which contains all the sub-methods required to
+At the core of ``pykinematics`` for processing MIMU data is the *MimuAngles* class, which contains all the sub-methods required to
 calibrate and estimate hip joint angles bilaterally. Using the default parameters, estimating joint angles is then as simple as:
 
 .. code-block:: python
@@ -15,7 +15,7 @@ calibrate and estimate hip joint angles bilaterally. Using the default parameter
 
     static_calibration_data, joint_center_task_data, trial_data = dummy_import_data()
 
-    mimu_estimator = pk.ImuAngles()  # initialize the estimator
+    mimu_estimator = pk.MimuAngles()  # initialize the estimator
 
     # calibrate based on a static standing trial and a trial for computing the joint center locations
     mimu_estimator.calibrate(static_calibration_data, joint_center_task_data)
@@ -75,7 +75,7 @@ sample data (`download sample data <https://www.uvm.edu/~rsmcginn/download/sampl
                      mask_data='gyr')
     orient_kwargs = dict(error_factor=5e-8, c=0.003, N=64, sigma_g=1e-3, sigma_a=6e-3)
 
-    mimu_estimator = pk.ImuAngles(gravity_value=9.8404, filter_values=filt_vals,
+    mimu_estimator = pk.MimuAngles(gravity_value=9.8404, filter_values=filt_vals,
                                   joint_center_kwargs=jc_kwargs, orientation_kwargs=orient_kwargs,
                                   knee_axis_kwargs=ka_kwargs)
 
