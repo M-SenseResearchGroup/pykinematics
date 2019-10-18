@@ -13,7 +13,7 @@ from pykinematics.imu import utility
 from pykinematics.imu.optimize import UnscentedKalmanFilter
 
 
-__all__ = ['MadgwickAHRS', 'OrientationComplementaryFilter', 'SSRO', 'OldSROFilter']
+__all__ = ['MadgwickAHRS', 'OrientationComplementaryFilter', 'SSRO']
 
 
 class MadgwickAHRS:
@@ -31,9 +31,9 @@ class MadgwickAHRS:
             Beta value for the algorithm.  Default is 1.0
 
         References
-        ---------
-        S. Madgwick et al. "Estimation of IMU and MARG orientation using a gradient descent algorith." IEEE Intl. Conf. on
-        Rehab. Robotics. 2011.
+        ----------
+        S. Madgwick et al. "Estimation of IMU and MARG orientation using a gradient descent algorithm." *IEEE Intl.
+        Conf. on Rehab. Robotics*. 2011.
         """
         self.sample_period = sample_period
         self.q = q_init

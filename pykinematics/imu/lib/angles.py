@@ -16,7 +16,7 @@ __all__ = ['hip_from_frames', 'hip_from_gyr']
 
 def hip_from_frames(pelvis_AF, thigh_AF, R, side, zero_angles=False):
     """
-    Compute the hip joint angles from fixed and reference axes from the anatomical frames.
+    Compute the hip joint angles from the segment fixed axes computed during the calibration.
 
     Parameters
     ----------
