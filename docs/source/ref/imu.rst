@@ -10,3 +10,4 @@ pykinematics.imu
   imu/joints
   imu/orientation
   imu/angles
+  imu/utility
