@@ -22,7 +22,7 @@ License
 Papers
 ------
 
-.. [1] L. Adamowicz, R. Gurchiek, J. Ferri, A. Ursiny, N. Fiorentino, and R. McGinnis. "Novel Algorithms for Estimating Relative Orientation and Hip Joint Angles from Wearable Sensors." *Sensors*. Under-review.
+.. [1]  L. Adamowicz, R. Gurchiek, J. Ferri, A. Ursiny, N. Fiorentino, and R. McGinnis. "Novel Algorithms for Estimating Relative Orientation and Hip Joint Angles from Wearable Sensors." *Sensors*. Under-review.
 
 Contents
 --------
