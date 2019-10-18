@@ -12,6 +12,13 @@ from dataclasses import dataclass
 
 @dataclass
 class MarkerNames:
+    """
+    Data class for storing the labels of specific markers needed to calculate hip joint angles. Each class attribute
+    is the name of a specific marker location, and its value is the name of that marker in the optical motion capture
+    data used to estimate hip joint angles.
+
+    To get a list of the markers, use :meth:`pykinematics.omc.default_marker_names`.
+    """
     # pelvis markers
     left_asis: str = 'left_asis'
     right_asis: str = 'right_asis'
