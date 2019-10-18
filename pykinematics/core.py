@@ -31,24 +31,24 @@ class ImuAngles:
             Providing a dictionary with any of the values modified (ie don't need to specify all 4) will changed the
             specific setting. Each entry is a length 2 tuple, containing first filter order, then cutoff frequency (Hz).
             Default settings and keys:
-                'Acceleration': (2, 15)
-                'Angular velocity': (2, 15)
-                'Angular acceleration': (2, 15)
-                'Magnetic field': (2, 15)
+                - 'Acceleration': (2, 15)
+                - 'Angular velocity': (2, 15)
+                - 'Angular acceleration': (2, 15)
+                - 'Magnetic field': (2, 15)
         angular_velocity_derivative_order : {2, 4}, optional
             Order for the calculation of the angular velocity derivative. Default is 2 for 2nd order.
         joint_center_kwargs : {None, dict}, optional
             Optional joint center computation key-word arguments, or None, for using the defaults. See
-            pymotion.imu.joints.Center for the possible arguments. Default is None.
+            :meth:`pykinematics.imu.joints.Center` for the possible arguments. Default is None.
         orientation_kwargs : {None, dict}, optional
             Optional sensor relative orientation key-word arguments, or NOne, for using the defaults. See
-            pymotion.imu.orientation.SROFilter for the possible arguments. Default is None.
+            :meth:`pykinematics.imu.orientation.SSRO` for the possible arguments. Default is None.
         correct_knee : bool, optional
             Correct the knee joint center location by shifting it along the rotation axis closer to the sensors. Default
             is True.
         knee_axis_kwargs : {None, dict}, optional
-            Optional knee-axis computation key-word arguments. See pymotion.imu.joints.KneeAxis for the possible
-            arguments. Default is None
+            Optional knee-axis computation key-word arguments. See :meth:`pykinematics.imu.joints.KneeAxis` for the
+            possible arguments. Default is None
         verbose : bool, optional
             Print messages regarding the status of the estimation process. Default is True
         """
@@ -94,9 +94,8 @@ class ImuAngles:
         Parameters
         ----------
         trial_data : dict
-            Nested dictionary containing the necessary data to compute joint angles. Top level keys required are
-            'Lumbar', 'Left thigh', and 'Right thigh', which all have sub-level keys of 'Acceleration',
-            'Angular velocity', and 'Magnetic field'.
+            Dictionary of data from a task to compute the hip joint angles for. Required keys/sensors are Lumbar,
+            Left and Right thighs. See the *Notes* for *ImuAngles.calibrate*.
         return_orientation : bool, optional
             Return the estimates of the relative orientation. Default is False.
 
@@ -148,22 +147,23 @@ class ImuAngles:
 
     def calibrate(self, static_data, joint_center_data):
         """
+        Calibration by computing the sensor-to-segment alignment.
 
         Parameters
         ----------
         static_data : dict
-            Nested dictionary containing data from a static standing trial. Top level keys required are
-            'Lumbar', 'Left thigh', and 'Right thigh', which all have sub-level keys of 'Acceleration',
-            'Angular velocity', and 'Magnetic field'.
+            Dictionary of sensor data from a static standing trial. Must contain at least Lumbar, Left thigh, and Right
+            thigh keys. Left shank and Right shank are suggested in order to provide an acceleration scale to ensure
+            that the measured gravity vectors are equivalent between sensors. See *Notes* for the structure of the
+            dictionary.
         joint_center_data : dict
-            Nested dictionary containing data from a trial to be used for joint center computation. The motions present
-            should activate all axes of the hip to a similar level to achieve good results in the joint center
-            estimation. Top level keys required are  'Lumbar', 'Left thigh', 'Right thigh', 'Left shank', and
-            'Right shank', which all have sub-level keys of 'Acceleration', 'Angular velocity', and 'Magnetic field'.
+            Dictionary of sensor data from a task to be used for joint center computation. As such the task should have
+            sufficient rotation about all possible axes (ie all 3 for the hip, 1 for the knee). Must contain Lumbar,
+            thigh, and shank keys. See *Notes*.
 
         Attributes
         ----------
-        acc_scales : dict
+        self.acc_scales : dict
             Dictionary of acceleration scales for each of the sensors in static_data, required to scale acceleration
             magnitude to that of local gravitational acceleration during static standing
         self.pelvis_axis : numpy.ndarray
@@ -177,7 +177,37 @@ class ImuAngles:
         self.l_thigh_AF : tuple
             Tuple of the x, y, and z anatomical axes for the left thigh, in the left thigh's sensor frame.
         self.r_thigh_AF : tuple
-            Tuple of the x, y, and z anatomical axes for the right thigh, in the right thigh's sensor frame,
+            Tuple of the x, y, and z anatomical axes for the right thigh, in the right thigh's sensor frame.
+
+        Notes
+        -----
+        Data dictionary key-level schematic:
+
+        - Lumbar
+            - Time [s]
+            - Acceleration [m/s^2]
+            - Angular velocity [rad/s]
+            - Magnetic field [not specified]
+        - Left thigh
+            - Time
+            - Acceleration
+            - Angular velocity
+            - Magnetic field
+        - Right thigh
+            - Time
+            - Acceleration
+            - Angular velocity
+            - Magnetic field
+        - (Left shank)
+            - Time
+            - Acceleration
+            - Angular velocity
+            - Magnetic field
+        - (Right shank)
+            - Time
+            - Acceleration
+            - Angular velocity
+            - Magnetic field
         """
         # check to ensure that the data provided has the required sensors
         ImuAngles._check_required_sensors(static_data, 'static')
@@ -286,7 +316,7 @@ class ImuAngles:
 
         Parameters
         ----------
-        jc : pymotion.imu.joints.Center
+        jc : pykinematics.imu.joints.Center
             Initialized joint center computation object
         prox : dict
             Dictionary, containing 'Acceleration', 'Angular velocity', and 'Angular acceleration' readings from a
@@ -328,8 +358,8 @@ class ImuAngles:
 
         Parameters
         ----------
-        sro : pymotion.imu.orientation.SROFilter
-            Sensor relative orientation estimation object
+        sro : pykinematics.imu.orientation.SROFilter
+            Object for estimating the sensor relative orientation
         sensor1 : dict
             Dictionary, containing 'Acceleration', 'Angular velocity', and 'Magnetic field' readings from a sensor.
         sensor2 : dict
@@ -402,11 +432,11 @@ class ImuAngles:
         filt_cutoff : float
             Cutoff frequency of the filter to be applied
         """
-        b, a = butter(filt_order, filt_cutoff * 2 * dt)
+        fc = butter(filt_order, filt_cutoff * 2 * dt)
         if x.ndim == 2:
-            x = filtfilt(b, a, x, axis=0)
+            x = filtfilt(fc[0], fc[1], x, axis=0)
         elif x.ndim == 1:
-            x = filtfilt(b, a, x)
+            x = filtfilt(fc[0], fc[1], x)
 
         return x
 
