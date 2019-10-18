@@ -34,7 +34,7 @@ version = pk.__version__[:3]
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'numpydoc', 'sphinx_rtd_theme']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.autosummary', 'numpydoc', 'sphinx_rtd_theme']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -45,6 +45,8 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 autoclass_content = 'both'
+autosummary_generate = True
+# autosummary_imported_members = True
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
