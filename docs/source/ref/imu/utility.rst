@@ -1,5 +1,5 @@
 pykinematics.imu.utility
-=======================
+========================
 
 .. currentmodule:: pykinematics.imu.utility
 
