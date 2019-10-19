@@ -1,11 +1,10 @@
 .. pykinematics API reference: core
 .. currentmodule:: pykinematics
 
-API Reference
+pykinematics
 =============
 
-.. autoclass:: MimuAngles
-  :members: calibrate, estimate
+.. toctree::
 
-.. autoclass:: OmcAngles
-  :members:
+  core/MimuAngles
+  core/OmcAngles

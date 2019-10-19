@@ -17,7 +17,7 @@ __all__ = ['Center', 'KneeAxis', 'correct_knee', 'fixed_axis']
 class Center:
     def __init__(self, g=9.81, method='SAC', mask_input=True, min_samples=1000, mask_data='acc', opt_kwargs=None):
         """
-        Object for joint center computation
+        Estimation of joint centers using kinematic constraints.
 
         Parameters
         ----------
@@ -38,8 +38,8 @@ class Center:
 
         References
         ----------
-        Crabolu et al. In vivo estimation of the shoulder joint center of rotation using magneto-inertial sensors:
-        MRI-based accuracy and repeatability assessment. BioMedical Engineering Online. 2017.
+        Crabolu et al. "In vivo estimation of the shoulder joint center of rotation using magneto-inertial sensors:
+        MRI-based accuracy and repeatability assessment." *BioMedical Engineering Online*. 2017.
         """
         self.g = g
         self.method = method
@@ -208,6 +208,7 @@ class Center:
 class KneeAxis:
     def __init__(self, mask_input=True, min_samples=1500, opt_kwargs=None):
         """
+        Estimation of the flexion/extension knee axis using kinematic constraints.
 
         Parameters
         ----------
@@ -220,9 +221,9 @@ class KneeAxis:
 
         References
         ----------
-        Seel et al. IMU-Based Joint Angle Measurement for Gait Analysis. Sensors. 2014
-        Seel et al. Joint axis and position estimation from inertial measurement data by exploiting kinematic
-        constraints. 2012 IEEE International Conference on Control Applications. 2012
+        Seel et al. "IMU-Based Joint Angle Measurement for Gait Analysis." *Sensors*. 2014
+        Seel et al. "Joint axis and position estimation from inertial measurement data by exploiting kinematic
+        constraints." *2012 IEEE International Conference on Control Applications*. 2012
         """
         self.mask_input = mask_input
         self.min_samples = min_samples
@@ -303,7 +304,7 @@ class KneeAxis:
         return norm(wp1, axis=1) - norm(wp2, axis=1)
 
 
-def correct_knee(thigh_w, shank_w, thigh_r, shank_r, R_shank_thigh, knee_axis_kwargs={}):
+def correct_knee(thigh_w, shank_w, thigh_r, shank_r, R_shank_thigh, knee_axis_kwargs=None):
     """
     Correct the knee position based on the computed knee axis.
 
@@ -329,6 +330,8 @@ def correct_knee(thigh_w, shank_w, thigh_r, shank_r, R_shank_thigh, knee_axis_kw
     shank_r_corr : numpy.ndarray
         Corrected knee joint center to shank sensor vector.
     """
+    if knee_axis_kwargs is None:
+        knee_axis_kwargs = {}
     # compute the knee axis
     ka = KneeAxis(**knee_axis_kwargs)
     thigh_j, shank_j = ka.compute(thigh_w, shank_w)

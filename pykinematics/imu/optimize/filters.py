@@ -31,11 +31,6 @@ class UnscentedKalmanFilter:
         R : matrix_like,array_like,float,str,optional
             Process covariance.  Must be None, NxN matrix/array, or float.
             If None, defaults to 1.
-
-        Methods
-        -------
-        run(z, f_kwargs, h_kwargs, sigma_kwargs)
-            Run one step of the unscented kalman filter algorithm.
         """
 
         if x0.ndim == 1:
@@ -202,12 +197,6 @@ class GaussNewton:
         verbose : bool, optional
             Display convergence messages on the first 10 iterations, and then on iterations that are perfect squares.
             Default is False
-
-        Methods
-        -------
-        fit(f, J, f_args={}, j_args={})
-            Perform the optimization using the function f to calculate the residuals, and J to calculate the Jacobian.
-            Extra arguments can be passed to f and J through f_args and j_args
         """
         self.tol = tol
         self.ftol = f_tol

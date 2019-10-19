@@ -58,8 +58,8 @@ def default_marker_names():
     marker_names : pykinematics.omc.MarkerNames
         Object for storing the marker names and their associated label in the optical motion capture marker data.
     """
-    for key in MarkerNames.__dict__.keys():
-        print(f'{key}: {MarkerNames.__dict__[key]}')
+    for key in MarkerNames.__dataclass_fields__.keys():
+        print(f'{key}: {MarkerNames.__dataclass_fields__[key].name}')
 
     return MarkerNames
 
