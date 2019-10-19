@@ -41,10 +41,10 @@ def compute_hip_center(pelvis_data, thigh_data, R, origin, marker_names='default
 
     References
     ----------
-    Halvorsen, Kjartan.  "Bias compensated least squares estimate of the center of rotation." J. of Biomech.
+    Halvorsen, Kjartan.  "Bias compensated least squares estimate of the center of rotation." *J. of Biomech*.
     Vol. 36. 2003.
     Gamage et al. "New least squares solution for estimating the average center of rotation and the axis of rotation."
-    J. of Biomech. Vol. 35. 2002
+    *J. of Biomech*. Vol. 35. 2002
     """
     if marker_names == 'default':
         names = utility.MarkerNames()
@@ -120,8 +120,7 @@ def compute_hip_center(pelvis_data, thigh_data, R, origin, marker_names='default
     return c
 
 
-def process_static(static_data, hip_center_data, window,
-                   marker_names='default'):
+def static(static_data, hip_center_data, window, marker_names='default'):
     """
     Process data from a static calibration trial to create the anatomical frames and create constant cluster to
     anatomical frame rotations.

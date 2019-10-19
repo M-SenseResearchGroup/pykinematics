@@ -10,3 +10,4 @@ API Reference
 
   core
   imu
+  omc

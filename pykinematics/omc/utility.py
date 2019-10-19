@@ -131,7 +131,7 @@ def compute_pelvis_origin(left_asis, right_asis):
     References
     ----------
     Ren et al.  "Whole body inverse dynamics over a complete gait cycle based only on measured kinematics."
-    J. of Biomech. 2008
+    *J. of Biomech*. 2008
     """
     origin = (left_asis + right_asis) / 2
 
@@ -140,7 +140,7 @@ def compute_pelvis_origin(left_asis, right_asis):
 
 def compute_thigh_origin(lat_fem_ep, med_fem_ep):
     """
-    Compute the origin of the pelvis.
+    Compute the origin of the thigh.
 
     Parameters
     ----------
@@ -157,7 +157,7 @@ def compute_thigh_origin(lat_fem_ep, med_fem_ep):
     References
     ----------
     Ren et al.  "Whole body inverse dynamics over a complete gait cycle based only on measured kinematics."
-    J. of Biomech. 2008
+    *J. of Biomech*. 2008
     """
     origin = (lat_fem_ep + med_fem_ep) / 2
 
@@ -166,7 +166,7 @@ def compute_thigh_origin(lat_fem_ep, med_fem_ep):
 
 def compute_shank_origin(lat_mall, med_mall):
     """
-    Compute the origin of the pelvis.
+    Compute the origin of the shank.
 
     Parameters
     ----------
@@ -183,7 +183,7 @@ def compute_shank_origin(lat_mall, med_mall):
     References
     ----------
     Ren et al.  "Whole body inverse dynamics over a complete gait cycle based only on measured kinematics."
-    J. of Biomech. 2008
+    *J. of Biomech*. 2008
     """
     origin = (lat_mall + med_mall) / 2
 
