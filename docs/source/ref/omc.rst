@@ -2,7 +2,7 @@
 .. currentmodule:: pykinematics
 
 pykinematics.omc
-=============
+================
 
 .. toctree::
 
