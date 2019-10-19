@@ -4,6 +4,10 @@ Measurement Unit (MIMU) wearable sensors and existing Optical Motion Capture (OM
 have been validated against OMC, and include novel methods for estimating sensor-to-sensor relative orientation and 
 sensor-to-segment alignment.
 
+## Documentation
+
+Documentation including the below examples, and the API reference can be found at [pykinematics documentation](https://pykinematics.readthedocs.io/en/latest/)
+
 ## Requirements
 
 - Python >=3.6
