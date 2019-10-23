@@ -26,6 +26,7 @@ class TestImuUtility:
         q3 = np.random.rand(4)
         q3 /= np.linalg.norm(q3)
 
+        # test multiplication
         assert np.allclose(quat_mult(q1, q3), np.array([0.77195, 0.45984, 0.0711, 0.43311]), atol=1e-5)
         assert np.allclose(quat_mult(q2, q3), np.array([-0.09605, 0.7969, 0.43489, 0.40816]), atol=1e-5)
         assert np.allclose(quat_mult(q1, q2), np.array([0.5, 0.5, 0.5, 0.5]), atol=1e-5)
@@ -34,6 +35,22 @@ class TestImuUtility:
         assert np.allclose(quat_mult(q1, q1), np.array([1, 0, 0, 0]), atol=1e-5)
         assert np.allclose(quat_mult(q2, q2), np.array([-0.5, 0.5, 0.5, 0.5]), atol=1e-5)
         assert np.allclose(quat_mult(q3, q3), np.array([0.19182, 0.70995, 0.10977, 0.66868]), atol=1e-5)
+
+        # test to make sure it raises an error if an array with less than 4 elements is passed
+        try:
+            quat_mult(np.random.rand(3), q2)
+        except ValueError:
+            assert True
+        else:
+            assert False
+
+        # test to make sure it raises an error if an array of multiple quaternions is passed
+        try:
+            quat_mult(np.random.rand(2, 4), np.random.rand(2, 4))
+        except ValueError:
+            assert True
+        else:
+            assert False
 
 
 
