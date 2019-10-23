@@ -52,5 +52,12 @@ class TestImuUtility:
         else:
             assert False
 
+    def test_quat_conj(self):
+        x1 = np.array([1, 0.5, 0.3, -0.2])
+        x2 = np.array([[0.3, 0.5, -0.5, -0.8], [-0.5, 0.3, 0.1, 0.9]])
+
+        assert np.allclose(quat_conj(x1), np.array([1, -0.5, -0.3, 0.2]))
+        assert np.allclose(quat_conj(x2), np.array([[0.3, -0.5, 0.5, 0.8], [-0.5, -0.3, -0.1, -0.9]]))
+
 
 
