@@ -59,5 +59,14 @@ class TestImuUtility:
         assert np.allclose(quat_conj(x1), np.array([1, -0.5, -0.3, 0.2]))
         assert np.allclose(quat_conj(x2), np.array([[0.3, -0.5, 0.5, 0.8], [-0.5, -0.3, -0.1, -0.9]]))
 
+    def test_quat_inv(self):
+        x1 = np.array([1, 1, 1, 1])
+
+        np.random.seed(1)
+        x2 = np.random.rand(4)
+
+        assert np.allclose(quat_inv(x1), np.array([0.25, -0.25, -0.25, -0.25]))
+        assert np.allclose(quat_inv(x2), np.array([0.531793913, -0.918570667, -0.000145852811, -0.385539899]))
+
 
 
