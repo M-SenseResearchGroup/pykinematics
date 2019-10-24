@@ -108,6 +108,9 @@ def quat_inv(q):
     q_inv : numpy.ndarray
         1x4 array representing the inverse of q
     """
+    # TODO change this, then remove the test that it doesn't work on arrays of quaternions
+    if q.size != 4:
+        raise ValueError('Not currently implemented for arrays of quaternions.')
     q_conj = q * array([1, -1, -1, -1])
     return q_conj / sum(q ** 2)
 
