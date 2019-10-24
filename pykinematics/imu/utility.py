@@ -180,6 +180,7 @@ def quat_mean(q):
 def vec2quat(v1, v2):
     """
     Find the rotation quaternion between two vectors. Rotate v1 onto v2
+
     Parameters
     ----------
     v1 : numpy.ndarray
