@@ -6,7 +6,7 @@ Lukas Adamowicz
 
 V0.1 - March 8, 2019
 """
-from numpy import array, zeros, argsort, dot, arccos, cross, cos, sin, real
+from numpy import array, zeros, argsort, dot, arccos, cross, cos, sin, real, allclose
 from numpy.linalg import norm, eig
 
 
@@ -193,15 +193,18 @@ def vec2quat(v1, v2):
     q : numpy.ndarray
         Quaternion representing the rotation from v1 to v2
     """
-    angle = arccos(dot(v1.flatten(), v2.flatten()) / (norm(v1) * norm(v2)))
+    if allclose(v1, v2):
+        return array([1, 0, 0, 0])
+    else:
+        angle = arccos(dot(v1.flatten(), v2.flatten()) / (norm(v1) * norm(v2)))
 
-    # Rotation axis is always normal to two vectors
-    axis = cross(v1.flatten(), v2.flatten())
-    axis = axis / norm(axis)  # normalize
+        # Rotation axis is always normal to two vectors
+        axis = cross(v1.flatten(), v2.flatten())
+        axis = axis / norm(axis)  # normalize
 
-    q = zeros(4)
-    q[0] = cos(angle / 2)
-    q[1:] = axis * sin(angle / 2)
-    q /= norm(q)
+        q = zeros(4)
+        q[0] = cos(angle / 2)
+        q[1:] = axis * sin(angle / 2)
+        q /= norm(q)
 
-    return q
+        return q
