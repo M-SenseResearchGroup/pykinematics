@@ -2,7 +2,7 @@
 Testing of functions and classes for IMU based estimation of joint kinematics
 """
 import pytest
-from numpy import array, allclose, isclose, random
+from numpy import array, allclose, isclose, random, identity, insert
 
 from pykinematics.imu.utility import *
 
@@ -62,5 +62,37 @@ class TestImuUtility:
         q = random.rand(2, 4)
         with pytest.raises(Exception):
             quat_inv(q)
+
+    @pytest.mark.parametrize(('q', 'result'), (
+            (array([1, 0, 0, 0]), identity(3)),
+            (array([0.26, 0.13, 0.64, -0.71]), array([[-0.8257546, 0.53511774, 0.14806656],
+                                                      [-0.2026174, -0.04106178, -0.97552084],
+                                                      [-0.51693413, -0.84044258, 0.14776805]])),
+            (array([[1, 0, 0, 0], [0.26, 0.13, 0.64, -0.71]]), array([identity(3),
+                                                                      [[-0.8257546, 0.53511774, 0.14806656],
+                                                                       [-0.2026174, -0.04106178, -0.97552084],
+                                                                       [-0.51693413, -0.84044258, 0.14776805]]]))))
+    def test_quat2matrix(self, q, result):
+        assert allclose(quat2matrix(q), result)
+
+    @pytest.mark.parametrize(('q', 'result'), (
+            (array([[1, 0, 0, 0], [0.26, 0.13, 0.64, -0.71]]), array([0.79481443, 0.08177961, 0.40260729, -0.44664246])),
+    ))
+    def test_quat_mean(self, q, result):
+        assert allclose(quat_mean(q), result)
+
+    @pytest.mark.parametrize(('v1', 'v2'), ((random.rand(3), random.rand(3)),
+                                            (array([-0.8, .044, 1.34]), array([-0.8, .044, 1.34]))))
+    def test_vec2quat(self, v1, v2):
+        v1 /= norm(v1)
+        v2 /= norm(v2)
+
+        q = vec2quat(v1, v2)
+        v2_comp = quat_mult(quat_mult(q, insert(v1, 0, 0)), quat_inv(q))[1:]
+        v1_comp = quat_mult(quat_mult(quat_inv(q), insert(v2, 0, 0)), q)[1:]
+
+        assert allclose(v2, v2_comp)
+        assert allclose(v1, v1_comp)
+
 
 
