@@ -235,7 +235,7 @@ class OrientationComplementaryFilter:
         self.dt = dt
 
         # get the first estimate of q
-        self.q = self.get_measurement(0)
+        self.q = self._get_measurement(0)
 
         # get the number of elements
         n = self.a_mag.size
@@ -247,28 +247,28 @@ class OrientationComplementaryFilter:
         for i in range(n):
             # update the bias if doing so
             if self.comp_bias:
-                self.update_biases(i)
+                self._update_biases(i)
 
             # get the prediction for the state
-            q_pred = self.get_prediction(i)
+            q_pred = self._get_prediction(i)
 
             # get the acceleration based correction
-            dq_acc = self.get_acc_correction(q_pred, i)
+            dq_acc = self._get_acc_correction(q_pred, i)
 
             # get the adaptive gain factor.  Factor is 1 if not using an adaptive gain
-            factor = self.get_adaptive_gain_factor(i)
+            factor = self._get_adaptive_gain_factor(i)
             alpha = self.alpha * factor
 
             # interpolate the acceleration based correction
-            dq_acc_int = self.get_scaled_quaternion(dq_acc, alpha)
+            dq_acc_int = self._get_scaled_quaternion(dq_acc, alpha)
 
             q_pred_acorr = utility.quat_mult(q_pred, dq_acc_int)
 
             # get the magnetometer based correction
-            dq_mag = self.get_mag_correction(q_pred_acorr, i)
+            dq_mag = self._get_mag_correction(q_pred_acorr, i)
 
             # interpolate the magnetometer based correction
-            dq_mag_int = self.get_scaled_quaternion(dq_mag, self.beta)
+            dq_mag_int = self._get_scaled_quaternion(dq_mag, self.beta)
 
             # correct the prediction resulting in final estimate
             self.q = utility.quat_mult(q_pred_acorr, dq_mag_int)
@@ -279,7 +279,7 @@ class OrientationComplementaryFilter:
             # save the orientation estimate
             self.q_[i] = self.q
 
-    def get_measurement(self, ind):
+    def _get_measurement(self, ind):
         """
         Get the initial measurement guess for the algorithm.
         """
@@ -303,7 +303,7 @@ class OrientationComplementaryFilter:
         q_meas = utility.quat_mult(q_acc, q_mag)
         return q_meas
 
-    def get_state(self, ind):
+    def _get_state(self, ind):
         """
         Check whether or not a time point is in steady state.
 
@@ -326,7 +326,7 @@ class OrientationComplementaryFilter:
         else:
             return True
 
-    def update_biases(self, ind):
+    def _update_biases(self, ind):
         """
         Update the bias parameters if in steady state.
 
@@ -335,12 +335,12 @@ class OrientationComplementaryFilter:
         ind : int
             Index of data to update from
         """
-        steady_state = self.get_state(ind)
+        steady_state = self._get_state(ind)
 
         if steady_state:
             self.w_bias += self.bias_alpha * (self.w[ind] - self.w_bias)
 
-    def get_prediction(self, ind):
+    def _get_prediction(self, ind):
         """
         Compute the predicted orientation estimate for the time point.
 
@@ -370,7 +370,7 @@ class OrientationComplementaryFilter:
 
         return q_pred
 
-    def get_acc_correction(self, q_pred, ind):
+    def _get_acc_correction(self, q_pred, ind):
         """
         Compute the acceleration based quaternion correction for the predicted value.
 
@@ -396,7 +396,7 @@ class OrientationComplementaryFilter:
         dq[2] = gp[0] / (2 * dq[0])
         return dq / norm(dq)
 
-    def get_mag_correction(self, q_pred, ind):
+    def _get_mag_correction(self, q_pred, ind):
         """
         Compute the magnetometer based correction for the predicted orientation.
 
@@ -427,7 +427,7 @@ class OrientationComplementaryFilter:
 
         return dq / norm(dq)
 
-    def get_scaled_quaternion(self, q, gain, p=array([1, 0, 0, 0])):
+    def _get_scaled_quaternion(self, q, gain, p=array([1, 0, 0, 0])):
         """
         Scale the quaternion via linear interoplation or spherical linear interpolation.
 
@@ -451,7 +451,7 @@ class OrientationComplementaryFilter:
 
         return qs / norm(qs)
 
-    def get_adaptive_gain_factor(self, ind):
+    def _get_adaptive_gain_factor(self, ind):
         """
         Get the adaptive gain factor.
 
@@ -477,7 +477,7 @@ class OrientationComplementaryFilter:
             return factor
 
     @staticmethod
-    def skew_symmetric(x):
+    def _skew_symmetric(x):
         """
         Get the skew symmetric representation of a vector.
 
