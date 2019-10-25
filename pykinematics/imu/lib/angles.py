@@ -11,7 +11,7 @@ from numpy.linalg import norm
 from scipy.integrate import cumtrapz
 
 
-__all__ = ['hip_from_frames', 'hip_from_gyr']
+__all__ = ['hip_from_frames']
 
 
 def hip_from_frames(pelvis_AF, thigh_AF, R, side, zero_angles=False):
