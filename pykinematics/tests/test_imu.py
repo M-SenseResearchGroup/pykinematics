@@ -5,6 +5,7 @@ import pytest
 from numpy import isclose, random, insert
 
 from pykinematics.imu.utility import *
+from pykinematics.imu.orientation import *
 
 
 class TestImuUtility:
@@ -64,6 +65,14 @@ class TestImuUtility:
 
         assert allclose(v2, v2_comp)
         assert allclose(v1, v1_comp)
+
+
+class TestImuOrientation:
+    def test_ssro_error(self):
+        with pytest.raises(ValueError) as e_info:
+            SSRO(c=1.01)
+        with pytest.raises(ValueError) as e_info:
+            SSRO(c=-0.1)
 
 
 
