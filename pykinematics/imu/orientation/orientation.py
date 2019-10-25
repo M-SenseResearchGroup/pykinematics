@@ -683,6 +683,7 @@ class SSRO:
         return Q
 
 
+'''
 class OldSROFilter:
     def __init__(self, Q=identity(4)*0.1, error_mode='linear', error_factor=0.1, g=9.81, s1_ahrs_beta=0.041,
                  s2_ahrs_beta=0.041, init_window=8, smooth_quaternions=False):
@@ -878,4 +879,4 @@ class OldSROFilter:
         """
         # measurement is the orientation quaternion, so just return the state vector
         return x
-
+'''
