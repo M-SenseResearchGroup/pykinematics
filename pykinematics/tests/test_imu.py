@@ -2,7 +2,8 @@
 Testing of functions and classes for IMU based estimation of joint kinematics
 """
 import pytest
-from numpy import isclose, random, insert
+from numpy import isclose, random, insert, array, zeros
+import h5py
 
 from pykinematics.imu.utility import *
 from pykinematics.imu.orientation import *
@@ -68,11 +69,28 @@ class TestImuUtility:
 
 
 class TestImuOrientation:
+    def test_madgwick(self, sample_file):
+        with h5py.File(sample_file, 'r') as f_:
+            acc = f_['Star Calibration']['Right Thigh']['Accelerometer'][()]
+            gyr = f_['Star Calibration']['Right Thigh']['Gyroscope'][()]
+            mag = f_['Star Calibration']['Right Thigh']['Magnetometer'][()]
+
+        # initialize object
+        ahrs = MadgwickAHRS(sample_period=1/128, q_init=array([1, 0, 0, 0]))
+
+        for i in range(150):  # only run for 150 samples, not need to waste time processing the whole trial
+            q_mimu = ahrs.update(gyr[i], acc[i], mag[i])
+            q_imu = ahrs.updateIMU(gyr[i], acc[i])
+
+        assert allclose(q_mimu, array([0.99532435, -0.00598765, 0.09583466, 0.01045504]))
+        assert allclose(q_imu, array([0.99529476, -0.00603338, 0.09613962, 0.0104455]))
+
     def test_ssro_error(self):
         with pytest.raises(ValueError) as e_info:
             SSRO(c=1.01)
         with pytest.raises(ValueError) as e_info:
             SSRO(c=-0.1)
+
 
 
 
