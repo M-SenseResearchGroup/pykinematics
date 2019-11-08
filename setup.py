@@ -21,8 +21,8 @@ setuptools.setup(
     project_urls={
         "Documentation": "https://pykinematics.readthedocs.io/en/latest/"
     },
-    include_pacakge_data=True,  # set to True if you have data to package, ie models or similar
-    package_data={'pykinematics.imu.data': ['*.h5']},
+    include_pacakge_data=False,  # set to True if you have data to package, ie models or similar
+    # package_data={'pykinematics.imu.data': ['*.h5']},
     # package_data={'package.module': ['data.csv']},  # if data.csv is in a separate module
     packages=setuptools.find_packages(),  # automatically find required packages
     license='MIT',
