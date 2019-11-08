@@ -1,5 +1,19 @@
 import pytest
 from numpy import array, identity
+import requests
+from tempfile import TemporaryFile
+
+
+@pytest.fixture(scope='package')
+def sample_file():
+    tf = TemporaryFile()  # temp file to store data
+    # pull the data from the web
+    data = requests.get('https://www.uvm.edu/~rsmcginn/download/sample_data.h5')
+    tf.write(data.content)
+    data.close()  # close off the connection
+
+    yield tf
+    tf.close()  # on teardown close the tempfile
 
 
 @pytest.fixture
