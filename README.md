@@ -42,6 +42,23 @@ pip install git+https://github.com/M-SenseResearchGroup/pymotion
 pip uninstall pykinematics
 ```
 
+## Running tests
+Tests are implemented with [pytest](https://docs.pytest.org/en/latest/), and can be automatically run with
+
+```shell script
+pytest --pyargs pykinematics.tests
+```
+
+If you want to see coverage, the following can be run (assuming [coverage](https://coverage.readthedocs.io/en/v4.5.x/) is installed):
+
+```shell script
+coverage run -m pytest --pyargs pykinematics.tests
+# generate the report
+coverage report
+# generate a HTML report under ./build/index.html
+coverage html
+```
+
 ## Example Usage
 
 A full example script can be found in `/scripts/example_code.py`. This requires a sample 
