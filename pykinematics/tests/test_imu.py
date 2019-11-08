@@ -76,7 +76,7 @@ class TestImuOrientation:
             mag = f_['Star Calibration']['Right Thigh']['Magnetometer'][()]
 
         # initialize object
-        ahrs = MadgwickAHRS(sample_period=1/128, q_init=array([1, 0, 0, 0]))
+        ahrs = MadgwickAHRS(sample_period=1/128, q_init=array([1, 0, 0, 0]), beta=0.041)
 
         for i in range(150):  # only run for 150 samples, not need to waste time processing the whole trial
             q_mimu = ahrs.update(gyr[i], acc[i], mag[i])
@@ -90,6 +90,25 @@ class TestImuOrientation:
             SSRO(c=1.01)
         with pytest.raises(ValueError) as e_info:
             SSRO(c=-0.1)
+
+    def test_ssro(self, sample_file):
+        with h5py.File(sample_file, 'r') as f_:
+            acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
+            gyr_lu = f_['Star Calibration']['Lumbar']['Gyroscope'][()]
+            mag_lu = f_['Star Calibration']['Lumbar']['Magnetometer'][()]
+
+            acc_rt = f_['Star Calibration']['Right Thigh']['Accelerometer'][()]
+            gyr_rt = f_['Star Calibration']['Right Thigh']['Gyroscope'][()]
+            mag_rt = f_['Star Calibration']['Right Thigh']['Magnetometer'][()]
+
+        # initialize object. Set params so if defaults change don't need to re-do
+        ssro = SSRO(c=0.01, N=64, error_factor=5e-8, sigma_g=1e-3, sigma_a=6e-3, grav=9.81, init_window=8)
+
+        x_ = ssro.run(acc_lu, acc_rt, gyr_lu, gyr_rt, mag_lu, mag_rt, dt=1/128)  # run the algorithm
+
+        assert allclose(x_[-1, :3], array([-0.98440996, -0.02239243, 0.17445807]))
+        assert allclose(x_[-1, 3:6], array([-0.99828522, -0.03859549, -0.04401142]))
+        assert allclose(x_[-1, 6:], array([0.76327537, -0.6417982, 0.06491315, 0.03594532]))
 
 
 
