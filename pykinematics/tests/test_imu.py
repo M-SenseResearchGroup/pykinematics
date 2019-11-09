@@ -125,11 +125,9 @@ class TestImuJoint:
         with h5py.File(sample_file, 'r') as f_:
             acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
             gyr_lu = f_['Star Calibration']['Lumbar']['Gyroscope'][()]
-            mag_lu = f_['Star Calibration']['Lumbar']['Magnetometer'][()]
 
             acc_rt = f_['Star Calibration']['Right Thigh']['Accelerometer'][()]
             gyr_rt = f_['Star Calibration']['Right Thigh']['Gyroscope'][()]
-            mag_rt = f_['Star Calibration']['Right Thigh']['Magnetometer'][()]
 
         dgyr_lu = gradient(gyr_lu, 1 / 128, axis=0)
         dgyr_rt = gradient(gyr_rt, 1 / 128, axis=0)
@@ -176,15 +174,13 @@ class TestImuJoint:
         assert allclose(rlu, array([-0.08500494, -0.11536752, 0.06489129]))
         assert allclose(rrt, array([0.19339046, 0.02506993, 0.04676906]))
 
-    def test_joint_center_ssfc(self, request, sample_file):
+    def test_joint_center_ssfc(self, sample_file):
         with h5py.File(sample_file, 'r') as f_:
             acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
             gyr_lu = f_['Star Calibration']['Lumbar']['Gyroscope'][()]
-            mag_lu = f_['Star Calibration']['Lumbar']['Magnetometer'][()]
 
             acc_rt = f_['Star Calibration']['Right Thigh']['Accelerometer'][()]
             gyr_rt = f_['Star Calibration']['Right Thigh']['Gyroscope'][()]
-            mag_rt = f_['Star Calibration']['Right Thigh']['Magnetometer'][()]
 
         dgyr_lu = gradient(gyr_lu, 1/128, axis=0)
         dgyr_rt = gradient(gyr_rt, 1/128, axis=0)
@@ -203,6 +199,23 @@ class TestImuJoint:
         assert allclose(rlu, array([-0.01771183, -0.10908138,  0.02415292]))
         assert allclose(rrt, array([0.25077565, 0.02290044, 0.05807483]))
 
+    def test_knee_axis(self, sample_file):
+        with h5py.File(sample_file, 'r') as f_:
+            gyr_rs = f_['Star Calibration']['Right Shank']['Gyroscope'][()]
 
+            gyr_rt = f_['Star Calibration']['Right Thigh']['Gyroscope'][()]
 
+        ka = KneeAxis(mask_input=True, min_samples=500, opt_kwargs={})
+
+        jrt, jrs = ka.compute(gyr_rt, gyr_rs)
+
+        assert allclose(jrt, array([0.05436506, 0.13249331, 0.98969185]))
+        assert allclose(jrs, array([-0.0713455, 0.78421354, 0.61637565]))
+
+    @pytest.mark.parametrize(('c1', 'c2', 'c2s', 'ax'), (
+            (array([0.1, -0.05, 0.03]), array([-0.11, -0.3, -0.01]), True, array([-0.01, -0.02, 0.04])),
+            (array([0.1, -0.05, 0.03]), array([-0.11, -0.3, -0.01]), False, array([-0.21, 0.02, -0.04]))
+    ))
+    def test_fixed_axis(self, c1, c2, c2s, ax):
+        axis = fixed_axis(c1, c2, c2s)
 
