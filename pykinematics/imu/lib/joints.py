@@ -143,13 +143,21 @@ class Center:
             r_init = zeros((6,))
 
             if self.mask_input:
-                prox_an = norm(prox_a, axis=1) - self.g
-                dist_an = norm(dist_a, axis=1) - self.g
+                if self.mask_data == 'acc':
+                    prox_data = norm(prox_a, axis=1) - self.g
+                    dist_data = norm(dist_a, axis=1) - self.g
+                    thresh = 1.0
+                elif self.mask_data == 'gyr':
+                    prox_data = norm(prox_w, axis=1)
+                    dist_data = norm(dist_w, axis=1)
+                    thresh = 2.0
+                else:
+                    raise ValueError('mask_data must be either (acc) or (gyr)')
 
-                mask = zeros(prox_an.shape, dtype=bool)
-                thresh = 0.8
+                mask = zeros(prox_data.shape, dtype=bool)
+
                 while mask.sum() < self.min_samples:
-                    mask = logical_and(nabs(prox_an) > thresh, nabs(dist_an) > thresh)
+                    mask = logical_and(nabs(prox_data) > thresh, nabs(dist_data) > thresh)
 
                     thresh -= 0.05
                     if thresh < 0.09:
