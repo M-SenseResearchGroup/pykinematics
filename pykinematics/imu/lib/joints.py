@@ -42,10 +42,16 @@ class Center:
         MRI-based accuracy and repeatability assessment." *BioMedical Engineering Online*. 2017.
         """
         self.g = g
-        self.method = method
+        if method in ['SAC', 'SSFC']:
+            self.method = method
+        else:
+            raise ValueError("Method must be either 'SAC' or 'SSFC'.")
         self.mask_input = mask_input
         self.min_samples = min_samples
-        self.mask_data = mask_data
+        if mask_data in ['acc', 'gyr']:
+            self.mask_data = mask_data
+        else:
+            raise ValueError("Masking data must be either 'acc' or 'gyr'.")
         if opt_kwargs is not None:
             self.opt_kwargs = opt_kwargs
         else:
@@ -92,8 +98,6 @@ class Center:
                     prox_data = norm(prox_w, axis=1)
                     dist_data = norm(dist_w, axis=1)
                     thresh = 2.0
-                else:
-                    raise ValueError('mask_data must be either (acc) or (gyr)')
 
                 mask = zeros(prox_data.shape, dtype=bool)
 
@@ -151,8 +155,6 @@ class Center:
                     prox_data = norm(prox_w, axis=1)
                     dist_data = norm(dist_w, axis=1)
                     thresh = 2.0
-                else:
-                    raise ValueError('mask_data must be either (acc) or (gyr)')
 
                 mask = zeros(prox_data.shape, dtype=bool)
 
