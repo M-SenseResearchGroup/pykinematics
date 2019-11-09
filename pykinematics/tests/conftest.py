@@ -4,6 +4,10 @@ import requests
 from tempfile import TemporaryFile
 
 
+def pytest_namespace():
+    return {'orientation': None}
+
+
 @pytest.fixture(scope='package')
 def sample_file():
     tf = TemporaryFile()  # temp file to store data

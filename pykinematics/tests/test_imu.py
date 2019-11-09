@@ -2,11 +2,12 @@
 Testing of functions and classes for IMU based estimation of joint kinematics
 """
 import pytest
-from numpy import isclose, random, insert, array, zeros
+from numpy import isclose, random, insert, array, zeros, gradient
 import h5py
 
 from pykinematics.imu.utility import *
 from pykinematics.imu.orientation import *
+from pykinematics.imu.lib.joints import *
 
 
 class TestImuUtility:
@@ -110,6 +111,30 @@ class TestImuOrientation:
         assert allclose(x_[-1, 3:6], array([-0.99828522, -0.03859549, -0.04401142]))
         assert allclose(x_[-1, 6:], array([0.76327537, -0.6417982, 0.06491315, 0.03594532]))
 
+        pytest.orientation = x_[:, 6:]  # save the orientation estimate
 
+
+class TestImuJoint:
+    def test_joint_center_sac(self, sample_file):
+        with h5py.File(sample_file, 'r') as f_:
+            acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
+            gyr_lu = f_['Star Calibration']['Lumbar']['Gyroscope'][()]
+            mag_lu = f_['Star Calibration']['Lumbar']['Magnetometer'][()]
+
+            acc_rt = f_['Star Calibration']['Right Thigh']['Accelerometer'][()]
+            gyr_rt = f_['Star Calibration']['Right Thigh']['Gyroscope'][()]
+            mag_rt = f_['Star Calibration']['Right Thigh']['Magnetometer'][()]
+
+        dgyr_lu = gradient(gyr_lu, 1/128, axis=0)
+        dgyr_rt = gradient(gyr_rt, 1/128, axis=0)
+
+        jc_comp = Center(g=9.81, method='SAC', mask_input=True, min_samples=500, mask_data='gyr', opt_kwargs=None)
+
+        R = quat2matrix(pytest.orientation)
+
+        rlu, rrt, res = jc_comp.compute(acc_lu, acc_rt, gyr_lu, gyr_rt, dgyr_lu, dgyr_rt, R)
+
+        assert allclose(rlu, array([-0.05498745, -0.07630086, 0.02368247]))
+        assert allclose(rlu, array([0.22075409, 0.02654856, 0.04593395]))
 
 
