@@ -25,7 +25,7 @@ class Center:
             Local value of gravitational acceleration. Default is 9.81 m/s^2.
         method : {'SAC', 'SSFC'}, optional
             Method to use for the computation of the joint center. Default is SAC. See Crabolu et al. for more details.
-            SSFCv is SSFC but using vectors instead of magnitude, which requires rotations between sensors.
+            Method 'SAC' requires knowing the rotation between the sensors.
         mask_input : bool, optional
             Mask the input to only use the highest acceleration samples. Default is True
         min_samples : int, optional
