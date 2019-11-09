@@ -111,10 +111,30 @@ class TestImuOrientation:
         assert allclose(x_[-1, 3:6], array([-0.99828522, -0.03859549, -0.04401142]))
         assert allclose(x_[-1, 6:], array([0.76327537, -0.6417982, 0.06491315, 0.03594532]))
 
-        pytest.orientation = x_[:, 6:]  # save the orientation estimate
-
 
 class TestImuJoint:
+    def test_joint_center_not_enough_samples(self, sample_file):
+        with h5py.File(sample_file, 'r') as f_:
+            acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
+            gyr_lu = f_['Star Calibration']['Lumbar']['Gyroscope'][()]
+            mag_lu = f_['Star Calibration']['Lumbar']['Magnetometer'][()]
+
+            acc_rt = f_['Star Calibration']['Right Thigh']['Accelerometer'][()]
+            gyr_rt = f_['Star Calibration']['Right Thigh']['Gyroscope'][()]
+            mag_rt = f_['Star Calibration']['Right Thigh']['Magnetometer'][()]
+
+        dgyr_lu = gradient(gyr_lu, 1 / 128, axis=0)
+        dgyr_rt = gradient(gyr_rt, 1 / 128, axis=0)
+
+        jc_comp = Center(g=9.81, method='SAC', mask_input=True, min_samples=5000, mask_data='gyr', opt_kwargs=None)
+
+        with pytest.raises(ValueError) as e_info:
+            rlu, rrt, res = jc_comp.compute(acc_lu, acc_rt, gyr_lu * 0.001, gyr_rt * 0.001, dgyr_lu, dgyr_rt, None)
+
+        jc_comp.method = 'SSFC'
+        with pytest.raises(ValueError) as e_info:
+            rlu, rrt, res = jc_comp.compute(acc_lu, acc_rt, gyr_lu * 0.001, gyr_rt * 0.001, dgyr_lu, dgyr_rt, None)
+
     def test_joint_center_sac(self, sample_file):
         with h5py.File(sample_file, 'r') as f_:
             acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
@@ -130,11 +150,34 @@ class TestImuJoint:
 
         jc_comp = Center(g=9.81, method='SAC', mask_input=True, min_samples=500, mask_data='gyr', opt_kwargs=None)
 
-        R = quat2matrix(pytest.orientation)
+        ssro = SSRO(c=0.01, N=64, error_factor=5e-8, sigma_g=1e-3, sigma_a=6e-3, grav=9.81, init_window=8)
+
+        x_ = ssro.run(acc_lu, acc_rt, gyr_lu, gyr_rt, mag_lu, mag_rt, dt=1 / 128)  # run the algorithm
+        R = quat2matrix(x_[:, 6:])
 
         rlu, rrt, res = jc_comp.compute(acc_lu, acc_rt, gyr_lu, gyr_rt, dgyr_lu, dgyr_rt, R)
 
         assert allclose(rlu, array([-0.05498745, -0.07630086, 0.02368247]))
-        assert allclose(rlu, array([0.22075409, 0.02654856, 0.04593395]))
+        assert allclose(rrt, array([0.22075409, 0.02654856, 0.04593395]))
+
+    def test_joint_center_ssfc(self, request, sample_file):
+        with h5py.File(sample_file, 'r') as f_:
+            acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
+            gyr_lu = f_['Star Calibration']['Lumbar']['Gyroscope'][()]
+            mag_lu = f_['Star Calibration']['Lumbar']['Magnetometer'][()]
+
+            acc_rt = f_['Star Calibration']['Right Thigh']['Accelerometer'][()]
+            gyr_rt = f_['Star Calibration']['Right Thigh']['Gyroscope'][()]
+            mag_rt = f_['Star Calibration']['Right Thigh']['Magnetometer'][()]
+
+        dgyr_lu = gradient(gyr_lu, 1/128, axis=0)
+        dgyr_rt = gradient(gyr_rt, 1/128, axis=0)
+
+        jc_comp = Center(g=9.81, method='SSFC', mask_input=True, min_samples=500, mask_data='gyr', opt_kwargs=None)
+
+        rlu, rrt, res = jc_comp.compute(acc_lu, acc_rt, gyr_lu, gyr_rt, dgyr_lu, dgyr_rt, None)
+
+        assert allclose(rlu, array([-0.01771183, -0.10908138,  0.02415292]))
+        assert allclose(rrt, array([0.25077565, 0.02290044, 0.05807483]))
 
 
