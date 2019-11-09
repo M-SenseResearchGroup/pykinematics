@@ -2,7 +2,7 @@
 Testing of functions and classes for IMU based estimation of joint kinematics
 """
 import pytest
-from numpy import isclose, random, insert, array, zeros, gradient
+from numpy import isclose, random, insert, array, zeros, gradient, random
 import h5py
 
 from pykinematics.imu.utility import *
@@ -113,6 +113,14 @@ class TestImuOrientation:
 
 
 class TestImuJoint:
+    def test_joint_center_bad_method(self):
+        with pytest.raises(ValueError) as e_info:
+            Center(method='not SAC or SSFC')
+
+    def test_joint_center_bad_mask_data(self):
+        with pytest.raises(ValueError) as e_info:
+            Center(mask_data='not acc or gyr')
+
     def test_joint_center_not_enough_samples(self, sample_file):
         with h5py.File(sample_file, 'r') as f_:
             acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
@@ -155,10 +163,18 @@ class TestImuJoint:
         x_ = ssro.run(acc_lu, acc_rt, gyr_lu, gyr_rt, mag_lu, mag_rt, dt=1 / 128)  # run the algorithm
         R = quat2matrix(x_[:, 6:])
 
+        # mask gyr data
         rlu, rrt, res = jc_comp.compute(acc_lu, acc_rt, gyr_lu, gyr_rt, dgyr_lu, dgyr_rt, R)
 
         assert allclose(rlu, array([-0.05498745, -0.07630086, 0.02368247]))
         assert allclose(rrt, array([0.22075409, 0.02654856, 0.04593395]))
+
+        # mask acc data
+        jc_comp.mask_data = 'acc'
+        rlu, rrt, res = jc_comp.compute(acc_lu, acc_rt, gyr_lu, gyr_rt, dgyr_lu, dgyr_rt, R)
+
+        assert allclose(rlu, array([-0.08500494, -0.11536752, 0.06489129]))
+        assert allclose(rrt, array([0.19339046, 0.02506993, 0.04676906]))
 
     def test_joint_center_ssfc(self, request, sample_file):
         with h5py.File(sample_file, 'r') as f_:
@@ -173,11 +189,20 @@ class TestImuJoint:
         dgyr_lu = gradient(gyr_lu, 1/128, axis=0)
         dgyr_rt = gradient(gyr_rt, 1/128, axis=0)
 
-        jc_comp = Center(g=9.81, method='SSFC', mask_input=True, min_samples=500, mask_data='gyr', opt_kwargs=None)
+        jc_comp = Center(g=9.81, method='SSFC', mask_input=True, min_samples=500, mask_data='gyr', opt_kwargs={})
 
+        rlu, rrt, res = jc_comp.compute(acc_lu, acc_rt, gyr_lu, gyr_rt, dgyr_lu, dgyr_rt, None)
+
+        assert allclose(rlu, array([-0.11404692, -0.03627268, 0.0426779]))
+        assert allclose(rrt, array([0.25021739, 0.0281134, 0.06362797]))
+
+        # test with masking acc
+        jc_comp.mask_data = 'acc'
         rlu, rrt, res = jc_comp.compute(acc_lu, acc_rt, gyr_lu, gyr_rt, dgyr_lu, dgyr_rt, None)
 
         assert allclose(rlu, array([-0.01771183, -0.10908138,  0.02415292]))
         assert allclose(rrt, array([0.25077565, 0.02290044, 0.05807483]))
+
+
 
 
