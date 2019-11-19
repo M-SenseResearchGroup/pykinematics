@@ -8,6 +8,7 @@ import h5py
 from pykinematics.imu.utility import *
 from pykinematics.imu.orientation import *
 from pykinematics.imu.lib.joints import *
+from pykinematics.imu.lib.calibration import *
 
 
 class TestImuUtility:
@@ -141,6 +142,7 @@ class TestImuJoint:
         with pytest.raises(ValueError) as e_info:
             rlu, rrt, res = jc_comp.compute(acc_lu, acc_rt, gyr_lu * 0.001, gyr_rt * 0.001, dgyr_lu, dgyr_rt, None)
 
+    @pytest.mark.integration
     def test_joint_center_sac(self, sample_file):
         with h5py.File(sample_file, 'r') as f_:
             acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
@@ -174,6 +176,7 @@ class TestImuJoint:
         assert allclose(rlu, array([-0.08500494, -0.11536752, 0.06489129]))
         assert allclose(rrt, array([0.19339046, 0.02506993, 0.04676906]))
 
+    @pytest.mark.integration
     def test_joint_center_ssfc(self, sample_file):
         with h5py.File(sample_file, 'r') as f_:
             acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
@@ -199,6 +202,7 @@ class TestImuJoint:
         assert allclose(rlu, array([-0.01771183, -0.10908138,  0.02415292]))
         assert allclose(rrt, array([0.25077565, 0.02290044, 0.05807483]))
 
+    @pytest.mark.integration
     def test_knee_axis(self, sample_file):
         with h5py.File(sample_file, 'r') as f_:
             gyr_rs = f_['Star Calibration']['Right Shank']['Gyroscope'][()]
@@ -218,4 +222,59 @@ class TestImuJoint:
     ))
     def test_fixed_axis(self, c1, c2, c2s, ax):
         axis = fixed_axis(c1, c2, c2s)
+
+
+class TestImuCalibration:
+    def test_get_acc_scale(self, sample_file):
+        with h5py.File(sample_file, 'r') as f_:
+            acc = f_['Static Calibration']['Lumbar']['Accelerometer'][()]
+
+        scale = get_acc_scale(acc, gravity=9.81)
+
+        assert isclose(scale, 0.9753079830416251)
+
+    @pytest.mark.integration
+    def test_static_calibration(self, sample_file, pelvis_af, left_thigh_af, right_thigh_af):
+        with h5py.File(sample_file, 'r') as f_:
+            stat = {}
+            star = {}
+
+            for loc in ['Left Thigh', 'Lumbar', 'Right Thigh']:
+                stat[loc] = {}
+                star[loc] = {}
+                for meas in ['Accelerometer', 'Gyroscope', 'Magnetometer']:
+                    stat[loc][meas] = f_['Static Calibration'][loc][meas][()]
+                    star[loc][meas] = f_['Star Calibration'][loc][meas][()]
+
+        ssro = SSRO(c=0.01, N=64, error_factor=5e-8, sigma_g=1e-3, sigma_a=6e-3, grav=9.84, init_window=8)
+
+        lt_l_q = ssro.run(stat['Lumbar']['Accelerometer'], stat['Left Thigh']['Accelerometer'],
+                          stat['Lumbar']['Gyroscope'], stat['Left Thigh']['Gyroscope'],
+                          stat['Lumbar']['Magnetometer'], stat['Left Thigh']['Magnetometer'], dt=1/128)
+        rt_l_q = ssro.run(stat['Lumbar']['Accelerometer'], stat['Right Thigh']['Accelerometer'],
+                          stat['Lumbar']['Gyroscope'], stat['Right Thigh']['Gyroscope'],
+                          stat['Lumbar']['Magnetometer'], stat['Right Thigh']['Magnetometer'], dt=1 / 128)
+
+        lum_r_r = array([-0.1, -0.05, 0.05])
+        lum_r_l = array([0.1, -0.5, 0.5])
+
+        thi_r_lum_r = array([0.25, 0.2, 0.075])
+        thi_r_lum_l = array([0.25, -0.15, 0.04])
+
+        thi_r_kne_r = array([-0.18, 0.1, 0])
+        thi_r_kne_l = array([-0.15, -0.15, 0.06])
+
+        pelvis_axis = fixed_axis(lum_r_l, lum_r_r, center_to_sensor=True)
+        l_thigh_axis = fixed_axis(thi_r_kne_l, thi_r_lum_l, center_to_sensor=True)
+        r_thigh_axis = fixed_axis(thi_r_kne_r, thi_r_lum_r, center_to_sensor=True)
+
+        p_AF, lt_AF, rt_AF = static(lt_l_q, rt_l_q, pelvis_axis, l_thigh_axis, r_thigh_axis,
+                                    stat['Lumbar']['Gyroscope'], stat['Left Thigh']['Gyroscope'],
+                                    stat['Right Thigh']['Gyroscope'], 128, window=1.0)
+
+        assert all((allclose(i, j) for i, j in zip(p_AF, pelvis_af)))
+        assert all((allclose(i, j) for i, j in zip(lt_AF, left_thigh_af)))
+        assert all((allclose(i, j) for i, j in zip(rt_AF, right_thigh_af)))
+
+
 

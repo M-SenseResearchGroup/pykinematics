@@ -4,6 +4,25 @@ import requests
 from tempfile import TemporaryFile
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--no-integration", action="store_true", default=False, help="Don't run integration testing"
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+
+
+def pytest_collection_modifyitems(config, items):
+    if not config.getoption('--no-integration'):
+        return  # --no-integration wasn't given, run all tests
+    skip_integration = pytest.mark.skip(reason="need --no-integration option to not run")
+    for item in items:
+        if "integration" in item.keywords:
+            item.add_marker(skip_integration)
+
+
 @pytest.fixture(scope='package')
 def sample_file():
     tf = TemporaryFile()  # temp file to store data
@@ -14,6 +33,24 @@ def sample_file():
 
     yield tf
     tf.close()  # on teardown close the tempfile
+
+
+@pytest.fixture
+def pelvis_af():
+    return array([-0.81886302,  0.18082344, 0.54476256]), array([-0.48946473, -0.71571412, -0.49817424]),\
+           array([0.29981268, -0.67457852, 0.67457852])
+
+
+@pytest.fixture
+def left_thigh_af():
+    return array([0.03280552, 0.51524739, 0.65611038]), array([-0.99875234, 0, 0.04993762]), \
+           array([0.0308188, -0.78684867, 0.61637601])
+
+
+@pytest.fixture
+def right_thigh_af():
+    return array([-0.22030363, 0.56599008, 0.50842072]), array([-0.96024973, -0.22331389, -0.16748542]),\
+           array([0.02366255, -0.66295973, 0.74828102])
 
 
 @pytest.fixture
