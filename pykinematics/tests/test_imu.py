@@ -71,6 +71,7 @@ class TestImuUtility:
 
 
 class TestImuOrientation:
+    @pytest.mark.integration
     def test_madgwick(self, sample_file):
         with h5py.File(sample_file, 'r') as f_:
             acc = f_['Star Calibration']['Right Thigh']['Accelerometer'][()]
@@ -93,6 +94,7 @@ class TestImuOrientation:
         with pytest.raises(ValueError) as e_info:
             SSRO(c=-0.1)
 
+    @pytest.mark.integration
     def test_ssro(self, sample_file):
         with h5py.File(sample_file, 'r') as f_:
             acc_lu = f_['Star Calibration']['Lumbar']['Accelerometer'][()]
