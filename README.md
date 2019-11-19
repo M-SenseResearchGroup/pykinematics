@@ -43,10 +43,17 @@ pip uninstall pykinematics
 ```
 
 ## Running tests
-Tests are implemented with [pytest](https://docs.pytest.org/en/latest/), and can be automatically run with
+Tests are implemented with [pytest](https://docs.pytest.org/en/latest/), and can be automatically run with:
 
 ```shell script
 pytest --pyargs pykinematics.tests
+```
+
+Optionally add `-v` to increase verbosity.
+
+If you don't want to run the integration tests (methods tests), use the following:
+```shell script
+python -m pykinematics.tests --no-integration
 ```
 
 If you want to see coverage, the following can be run (assuming [coverage](https://coverage.readthedocs.io/en/v4.5.x/) is installed):
