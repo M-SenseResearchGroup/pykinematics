@@ -9,6 +9,7 @@ from pykinematics.imu.utility import *
 from pykinematics.imu.orientation import *
 from pykinematics.imu.lib.joints import *
 from pykinematics.imu.lib.calibration import *
+from pykinematics.imu.lib.angles import *
 
 
 class TestImuUtility:
@@ -279,4 +280,10 @@ class TestImuCalibration:
         assert all((allclose(i, j) for i, j in zip(rt_AF, right_thigh_af)))
 
 
+class TestImuJointAngles:
+    def test_hip_from_frames(self, pelvis_af, left_thigh_af, R):
+        angles = hip_from_frames(pelvis_af, left_thigh_af, R, side='left', zero_angles=False)
 
+        assert allclose(angles, array([[-61.27792272, -19.45858847, -6.21248057],
+                                       [-61.08468402, -19.6292999, -11.27089438],
+                                       [-60.98217794, -19.70846086, -13.0045286]]))

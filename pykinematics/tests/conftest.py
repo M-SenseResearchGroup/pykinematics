@@ -1,5 +1,5 @@
 import pytest
-from numpy import array, identity
+from numpy import array, identity, cos, sin, pi, concatenate
 import requests
 from tempfile import TemporaryFile
 
@@ -155,3 +155,16 @@ def q2mat(request, q1n, q2n, q3n, q4_2d):
         return q4_2d, array([identity(3), [[-0.8257546, 0.53511774, 0.14806656],
                                            [-0.2026174, -0.04106178, -0.97552084],
                                            [-0.51693413, -0.84044258, 0.14776805]]])
+
+
+@pytest.fixture
+def R():
+    r1 = array([[1, 0, 0], [0, 0, 1], [0, 1, 0]]).reshape((-1, 3, 3))
+
+    t2 = 5 * pi / 180
+    r2 = r1 @ array([[1, 0, 0], [0, cos(t2), -sin(t2)], [0, sin(t2), cos(t2)]]).reshape((-1, 3, 3))
+
+    t3 = 7.5 * pi / 180
+    r3 = r1 @ array([[1, 0, 0], [0, cos(t3), -sin(t3)], [0, sin(t2), cos(t3)]]).reshape((-1, 3, 3))
+
+    return concatenate((r1, r2, r3), axis=0)
