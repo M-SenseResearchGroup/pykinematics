@@ -1,7 +1,4 @@
 import pytest
-from numpy import array, identity, cos, sin, pi, concatenate
-import requests
-from tempfile import TemporaryFile
 
 
 def pytest_addoption(parser):
