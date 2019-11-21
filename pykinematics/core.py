@@ -606,6 +606,6 @@ class OmcAngles:
 
         window = int(self.window_t * fs)
         # process the calibration data
-        self.pelvis, self.left_thigh, self.right_thigh = omc.calibration.process_static(static_data_tuple,
-                                                                                        joint_center_data_tuple,
-                                                                                        window, self.marker_names)
+        self.pelvis, self.left_thigh, self.right_thigh = omc.calibration.static(static_data_tuple,
+                                                                                joint_center_data_tuple,
+                                                                                window, self.marker_names)
