@@ -123,6 +123,8 @@ def thigh(marker_data, side, use_cluster=True, R_s_c=None, hip_joint_center=None
             mid_ep = (marker_data[names.right_lep] + marker_data[names.right_mep]) / 2
         elif side == 'left':
             mid_ep = (marker_data[names.left_lep] + marker_data[names.left_mep]) / 2
+        else:
+            raise ValueError('side must be either "left" or "right".')
 
         # create the axes
         y = hip_joint_center - mid_ep
@@ -132,8 +134,7 @@ def thigh(marker_data, side, use_cluster=True, R_s_c=None, hip_joint_center=None
             z_tmp = marker_data[names.right_lep] - marker_data[names.right_mep]
         elif side == 'left':
             z_tmp = marker_data[names.left_mep] - marker_data[names.left_lep]
-        else:
-            raise ValueError('side must be either "left" or "right".')
+
 
         x = cross(y, z_tmp)
         x /= norm(x)
