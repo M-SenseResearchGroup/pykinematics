@@ -39,7 +39,7 @@ class MarkerNames:
     left_thigh_c2: str = 'left_thigh_cluster2'
     left_thigh_c3: str = 'left_thigh_cluster3'
 
-    # left thigh markers
+    # right thigh markers
     right_lep: str = 'right_lat_femoral_epicondyle'
     right_mep: str = 'right_med_femoral_epicondyle'
 
