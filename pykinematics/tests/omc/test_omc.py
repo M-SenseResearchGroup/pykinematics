@@ -1,7 +1,9 @@
 import pytest
-from numpy import allclose, isclose, array, mean, concatenate
+from numpy import allclose, isclose, array, mean, concatenate, argmax
+from numpy.linalg import det
 
 from pykinematics.omc.utility import *
+from pykinematics.omc.segmentFrames import *
 
 
 class TestOmcUtility:
@@ -36,3 +38,25 @@ class TestOmcUtility:
 
         gnd = mean(concatenate((lat_mall.reshape((-1, 3)), med_mall.reshape((-1, 3))), axis=0), axis=0)
         assert isclose(origin, gnd)
+
+
+class TestOmcSegmentFrames:
+    def test_pelvis(self, lumbar_marker_sample):
+        af = pelvis(lumbar_marker_sample, use_cluster=False, R_s_c=None, marker_names='default')
+
+        assert isclose(det(af[0]), 1.0)
+        assert isclose(det(af[1]), 1.0)
+        assert af[0].astype(int) == array([[0, 0, 1], [1, 0, 0], [0, 1, 0]])
+        assert argmax(af[1]) == array([2, 0, 1])
+
+    def test_thigh_side_error(self):
+        with pytest.raises(ValueError) as e_info:
+            thigh(None, 'not left/right', use_cluster=False, R_s_c=None, hip_joint_center=None, marker_names='default')
+        with pytest.raises(ValueError) as e_info:
+            thigh(None, 'not left/right', use_cluster=True, R_s_c=None, hip_joint_center=None, marker_names='default')
+
+    def test_thigh(self, thigh_marker_sample, right_hip_jc):
+        af = thigh(thigh_marker_sample, 'right', use_cluster=False, R_s_c=None, hip_joint_center=right_hip_jc,
+                   marker_names='default')
+
+        assert allclose(af, array([[0, 0, 1], [1, 0, 0], [0, 1, 0]]))
