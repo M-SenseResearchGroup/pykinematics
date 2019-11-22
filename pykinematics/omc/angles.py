@@ -1,5 +1,5 @@
 """
-Methods that are common and needed accross both IMU and OMC methods
+Methods for calculating OMC joint angles
 
 GNU GPL v3.0
 Lukas Adamowicz
