@@ -21,7 +21,7 @@ class TestOmcUtility:
         origin = compute_pelvis_origin(left_asis, right_asis)
 
         gnd = mean(concatenate((left_asis.reshape((-1, 3)), right_asis.reshape((-1, 3))), axis=0), axis=0)
-        assert isclose(origin, gnd)
+        assert allclose(origin, gnd)
 
     @pytest.mark.parametrize(('lat_fem_ep', 'med_fem_ep'), ((array([300, 200, 800]), array([0, 200, 650])),
                                                             (array([-150, 325, 920]), array([-430, 25, 330]))))
@@ -29,7 +29,7 @@ class TestOmcUtility:
         origin = compute_pelvis_origin(lat_fem_ep, med_fem_ep)
 
         gnd = mean(concatenate((lat_fem_ep.reshape((-1, 3)), med_fem_ep.reshape((-1, 3))), axis=0), axis=0)
-        assert isclose(origin, gnd)
+        assert allclose(origin, gnd)
 
     @pytest.mark.parametrize(('lat_mall', 'med_mall'), ((array([300, 200, 800]), array([0, 200, 650])),
                                                         (array([-150, 325, 920]), array([-430, 25, 330]))))
@@ -37,7 +37,7 @@ class TestOmcUtility:
         origin = compute_pelvis_origin(lat_mall, med_mall)
 
         gnd = mean(concatenate((lat_mall.reshape((-1, 3)), med_mall.reshape((-1, 3))), axis=0), axis=0)
-        assert isclose(origin, gnd)
+        assert allclose(origin, gnd)
 
 
 class TestOmcSegmentFrames:
@@ -46,8 +46,8 @@ class TestOmcSegmentFrames:
 
         assert isclose(det(af[0]), 1.0)
         assert isclose(det(af[1]), 1.0)
-        assert af[0].astype(int) == array([[0, 0, 1], [1, 0, 0], [0, 1, 0]])
-        assert argmax(af[1]) == array([2, 0, 1])
+        assert allclose(af[0].astype(int), array([[0, 0, 1], [1, 0, 0], [0, 1, 0]]))
+        assert all(argmax(af[1], axis=1) == array([2, 0, 1]))
 
     def test_thigh_side_error(self):
         with pytest.raises(ValueError) as e_info:
