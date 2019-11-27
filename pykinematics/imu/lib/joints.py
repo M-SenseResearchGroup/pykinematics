@@ -25,7 +25,7 @@ class Center:
             Local value of gravitational acceleration. Default is 9.81 m/s^2.
         method : {'SAC', 'SSFC'}, optional
             Method to use for the computation of the joint center. Default is SAC. See Crabolu et al. for more details.
-            SSFCv is SSFC but using vectors instead of magnitude, which requires rotations between sensors.
+            Method 'SAC' requires knowing the rotation between the sensors.
         mask_input : bool, optional
             Mask the input to only use the highest acceleration samples. Default is True
         min_samples : int, optional
@@ -42,10 +42,16 @@ class Center:
         MRI-based accuracy and repeatability assessment." *BioMedical Engineering Online*. 2017.
         """
         self.g = g
-        self.method = method
+        if method in ['SAC', 'SSFC']:
+            self.method = method
+        else:
+            raise ValueError("Method must be either 'SAC' or 'SSFC'.")
         self.mask_input = mask_input
         self.min_samples = min_samples
-        self.mask_data = mask_data
+        if mask_data in ['acc', 'gyr']:
+            self.mask_data = mask_data
+        else:
+            raise ValueError("Masking data must be either 'acc' or 'gyr'.")
         if opt_kwargs is not None:
             self.opt_kwargs = opt_kwargs
         else:
@@ -92,8 +98,6 @@ class Center:
                     prox_data = norm(prox_w, axis=1)
                     dist_data = norm(dist_w, axis=1)
                     thresh = 2.0
-                else:
-                    raise ValueError('mask_data must be either (acc) or (gyr)')
 
                 mask = zeros(prox_data.shape, dtype=bool)
 
@@ -143,13 +147,19 @@ class Center:
             r_init = zeros((6,))
 
             if self.mask_input:
-                prox_an = norm(prox_a, axis=1) - self.g
-                dist_an = norm(dist_a, axis=1) - self.g
+                if self.mask_data == 'acc':
+                    prox_data = norm(prox_a, axis=1) - self.g
+                    dist_data = norm(dist_a, axis=1) - self.g
+                    thresh = 1.0
+                elif self.mask_data == 'gyr':
+                    prox_data = norm(prox_w, axis=1)
+                    dist_data = norm(dist_w, axis=1)
+                    thresh = 2.0
 
-                mask = zeros(prox_an.shape, dtype=bool)
-                thresh = 0.8
+                mask = zeros(prox_data.shape, dtype=bool)
+
                 while mask.sum() < self.min_samples:
-                    mask = logical_and(nabs(prox_an) > thresh, nabs(dist_an) > thresh)
+                    mask = logical_and(nabs(prox_data) > thresh, nabs(dist_data) > thresh)
 
                     thresh -= 0.05
                     if thresh < 0.09:

@@ -18,11 +18,11 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/M-SenseResearchGroup/pymotion",  # project url, most likely a github link
     # download_url="https://github.com/M-SenseResearchGroup/pymotion",  # link to where the package can be downloaded, most likely PyPI
-    # project_urls={
-    #     "Documentation": "https://github.com/M-SenseResearchGroup/pymotion"
-    # },
+    project_urls={
+        "Documentation": "https://pykinematics.readthedocs.io/en/latest/"
+    },
     include_pacakge_data=False,  # set to True if you have data to package, ie models or similar
-    # package_data={'package': ['*.csv']},  # currently adds any csv files alongside the top level __init__.py
+    # package_data={'pykinematics.imu.data': ['*.h5']},
     # package_data={'package.module': ['data.csv']},  # if data.csv is in a separate module
     packages=setuptools.find_packages(),  # automatically find required packages
     license='MIT',

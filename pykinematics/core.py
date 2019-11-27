@@ -113,6 +113,12 @@ class MimuAngles:
         R_Rthigh_lumbar : numpy.ndarray, optional
             Rotations from the right thigh sensor to the lumbar sensor for all time points in the provided data.
             Only returned if `return_orientation` is True.
+        q_Lthigh_lumbar : numpy.ndarray, optional
+            Rotation quaternions from the left thigh sensor to the lumbar sensor for all time points in the provided data.
+            Only returned if `return_orientation` is True.
+        q_Rthigh_lumbar : numpy.ndarray, optional
+            Rotation quaternions from the right thigh sensor to the lumbar sensor for all time points in the provided data.
+            Only returned if `return_orientation` is True.
         """
         # check to ensure that the data provided has the required sensors
         MimuAngles._check_required_sensors(task_data, 'trial')
@@ -131,8 +137,8 @@ class MimuAngles:
         if self.verbose:
             print('Computing sensor relative orientation...')
         srof = imu.orientation.SSRO(grav=self.grav_val, **self.orient_kwargs)
-        _, R_lt_lb = MimuAngles._compute_orientation(srof, task_data['Lumbar'], task_data['Left thigh'])
-        _, R_rt_lb = MimuAngles._compute_orientation(srof, task_data['Lumbar'], task_data['Right thigh'])
+        q_lt_lb, R_lt_lb = MimuAngles._compute_orientation(srof, task_data['Lumbar'], task_data['Left thigh'])
+        q_rt_lb, R_rt_lb = MimuAngles._compute_orientation(srof, task_data['Lumbar'], task_data['Right thigh'])
 
         # compute joint angles
         if self.verbose:
@@ -141,7 +147,7 @@ class MimuAngles:
         r_hip_ang = imu.angles.hip_from_frames(self.pelvis_AF, self.r_thigh_AF, R_rt_lb, side='right')
 
         if return_orientation:
-            return l_hip_ang, r_hip_ang, R_lt_lb, R_rt_lb
+            return l_hip_ang, r_hip_ang, R_lt_lb, R_rt_lb, q_lt_lb, q_rt_lb
         else:
             return l_hip_ang, r_hip_ang
 
@@ -600,6 +606,6 @@ class OmcAngles:
 
         window = int(self.window_t * fs)
         # process the calibration data
-        self.pelvis, self.left_thigh, self.right_thigh = omc.calibration.process_static(static_data_tuple,
-                                                                                        joint_center_data_tuple,
-                                                                                        window, self.marker_names)
+        self.pelvis, self.left_thigh, self.right_thigh = omc.calibration.static(static_data_tuple,
+                                                                                joint_center_data_tuple,
+                                                                                window, self.marker_names)

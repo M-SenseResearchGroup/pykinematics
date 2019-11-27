@@ -4,6 +4,10 @@ Measurement Unit (MIMU) wearable sensors and existing Optical Motion Capture (OM
 have been validated against OMC, and include novel methods for estimating sensor-to-sensor relative orientation and 
 sensor-to-segment alignment.
 
+## Documentation
+
+Documentation including the below examples, and the API reference can be found at [pykinematics documentation](https://pykinematics.readthedocs.io/en/latest/)
+
 ## Requirements
 
 - Python >=3.6
@@ -36,6 +40,30 @@ pip install git+https://github.com/M-SenseResearchGroup/pymotion
 ``pykinematics`` can be uninstalled by running
 ```shell script
 pip uninstall pykinematics
+```
+
+## Running tests
+Tests are implemented with [pytest](https://docs.pytest.org/en/latest/), and can be automatically run with:
+
+```shell script
+pytest --pyargs pykinematics.tests
+```
+
+Optionally add `-v` to increase verbosity.
+
+If you don't want to run the integration tests (methods tests), use the following:
+```shell script
+python -m pykinematics.tests --no-integration
+```
+
+If you want to see coverage, the following can be run (assuming [coverage](https://coverage.readthedocs.io/en/v4.5.x/) is installed):
+
+```shell script
+coverage run -m pytest --pyargs pykinematics.tests
+# generate the report
+coverage report
+# generate a HTML report under ./build/index.html
+coverage html
 ```
 
 ## Example Usage
