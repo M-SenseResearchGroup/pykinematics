@@ -31,11 +31,13 @@ conda install -c anaconda h5py
 
 ## Installation
 
-``pykinematics`` is not currently on PyPI. To install, run the following in the terminal:
+``pykinematics`` can be installed using pip:
 
 ```shell script
-pip install git+https://github.com/M-SenseResearchGroup/pymotion
+pip install pykinematics
 ```
+
+Alternatively, you can clone this repository and install from source.
 
 ``pykinematics`` can be uninstalled by running
 ```shell script
